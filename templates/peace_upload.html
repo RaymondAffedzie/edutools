@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PEACE Sheet Generator — EduTools</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <style>
+        /* ── Layout ── */
+        .upload-wrap {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 40px 80px;
+        }
+
+        /* ── Workflow stepper ── */
+        .stepper {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 40px;
+        }
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+        .step-bubble {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-head);
+            font-size: 13px;
+            font-weight: 700;
+            flex-shrink: 0;
+            border: 2px solid var(--border);
+            color: var(--text-dim);
+            background: var(--glass);
+            transition: all 0.2s;
+        }
+        .step.active .step-bubble {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-color: transparent;
+            color: white;
+            box-shadow: 0 0 16px rgba(16, 185, 129, 0.4);
+        }
+        .step.done .step-bubble {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: #10b981;
+            color: #34d399;
+        }
+        .step-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-dim);
+            white-space: nowrap;
+        }
+        .step.active .step-label { color: var(--text); }
+        .step-connector {
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+            margin: 0 8px;
+            flex-shrink: 1;
+        }
+
+        /* ── Two-column layout ── */
+        .upload-cols {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+        @media (max-width: 680px) { .upload-cols { grid-template-columns: 1fr; } }
+
+        /* ── Cards ── */
+        .ps-card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: 28px;
+            transition: border-color 0.2s;
+        }
+        .ps-card:hover { border-color: var(--border-hi); }
+
+        .ps-card-title {
+            font-family: var(--font-head);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .ps-card-title .material-icons-round {
+            font-size: 16px;
+            color: #10b981;
+        }
+
+        /* ── Drop zone ── */
+        .drop-zone {
+            border: 2px dashed rgba(16, 185, 129, 0.3);
+            border-radius: var(--radius-md);
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            background: rgba(16, 185, 129, 0.03);
+            cursor: pointer;
+            transition: all 0.25s;
+            position: relative;
+        }
+        .drop-zone.over {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.08);
+            transform: scale(1.01);
+        }
+        .drop-zone input[type="file"] { display: none; }
+
+        .drop-icon-wrap {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .drop-icon-wrap .material-icons-round {
+            font-size: 28px;
+            color: #34d399;
+        }
+
+        .drop-headline {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+        .drop-link { color: #34d399; cursor: pointer; }
+        .drop-sub {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-top: 6px;
+        }
+
+        .file-badge {
+            display: none;
+            margin-top: 14px;
+            padding: 0.55rem 1rem;
+            background: rgba(16, 185, 129, 0.1);
+            color: #6ee7b7;
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+        .file-badge .material-icons-round { font-size: 16px; }
+
+        /* ── Submit button ── */
+        .ps-btn-primary {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            margin-top: 16px;
+            padding: 0.85rem 1.5rem;
+            font-size: 0.95rem;
+            font-weight: 700;
+            font-family: var(--font-body);
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: 0.02em;
+        }
+        .ps-btn-primary:hover:not(:disabled) {
+            background: linear-gradient(135deg, #059669, #047857);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+        }
+        .ps-btn-primary:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .ps-btn-primary .material-icons-round { font-size: 18px; }
+
+        /* ── Alert ── */
+        .ps-alert-error {
+            padding: 0.85rem 1rem;
+            background: rgba(220, 38, 38, 0.1);
+            color: #fca5a5;
+            border-radius: var(--radius-sm);
+            margin-bottom: 20px;
+            border-left: 4px solid #dc2626;
+            font-size: 0.9rem;
+        }
+
+        /* ── Format hint card ── */
+        .hint-card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: 28px;
+            height: 100%;
+        }
+
+        .hint-row {
+            display: flex;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            align-items: flex-start;
+        }
+        .hint-row:last-of-type { border-bottom: none; }
+
+        .hint-num {
+            width: 24px;
+            height: 24px;
+            background: var(--glass-md);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            font-family: var(--font-head);
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .hint-content { flex: 1; }
+        .hint-label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 2px;
+        }
+        .hint-example {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            font-family: monospace;
+        }
+
+        .format-code-block {
+            margin-top: 16px;
+            padding: 12px 14px;
+            background: rgba(0, 212, 255, 0.04);
+            border: 1px solid rgba(0, 212, 255, 0.15);
+            border-radius: var(--radius-sm);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            line-height: 1.7;
+        }
+        .format-code-block code {
+            color: var(--cyan);
+            font-family: monospace;
+        }
+
+        /* ── Spinner ── */
+        .spinner { display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner.active {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Animated background -->
+    <div class="bg-canvas" aria-hidden="true">
+        <div class="bg-orb"></div>
+        <div class="bg-orb"></div>
+        <div class="bg-orb"></div>
+    </div>
+
+    <!-- Island Navbar -->
+    <nav class="island-nav" aria-label="Main navigation">
+        <div class="nav-logo">
+            <span class="material-icons-round">school</span>
+        </div>
+        <div class="nav-divider"></div>
+        <a href="/" class="nav-item" data-tooltip="Home">
+            <span class="material-icons-round">home</span>
+        </a>
+        <a href="/group-generator" class="nav-item" data-tooltip="Group Generator">
+            <span class="material-icons-round">group_work</span>
+        </a>
+        <a href="/student-picker" class="nav-item" data-tooltip="Student Picker">
+            <span class="material-icons-round">how_to_reg</span>
+        </a>
+        <a href="/assessment-generator" class="nav-item" data-tooltip="Assessment Generator">
+            <span class="material-icons-round">assignment</span>
+        </a>
+        <a href="/pdf-extractor" class="nav-item" data-tooltip="PDF Extractor">
+            <span class="material-icons-round">picture_as_pdf</span>
+        </a>
+        <a href="/peace-sheet" class="nav-item active" data-tooltip="PEACE Sheet">
+            <span class="material-icons-round">table_chart</span>
+        </a>
+    </nav>
+
+    <div class="page-wrap">
+        <div class="upload-wrap">
+
+            <!-- Page Header -->
+            <div class="page-header" style="padding-left: 0; padding-right: 0;">
+                <div class="breadcrumb">
+                    <a href="/"><span class="material-icons-round">home</span> Home</a>
+                    <span class="material-icons-round">chevron_right</span>
+                    <span>PEACE Sheet Generator</span>
+                </div>
+                <h1>PEACE Sheet <span style="background: linear-gradient(135deg, #10b981, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Generator</span></h1>
+                <p>Turn a raw Giblib detailed-scores CSV into the standardised 56-column PEACE Sheet in three steps.</p>
+            </div>
+
+            <!-- Stepper -->
+            <div class="stepper">
+                <div class="step active">
+                    <div class="step-bubble">1</div>
+                    <span class="step-label">Upload CSV</span>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step">
+                    <div class="step-bubble">2</div>
+                    <span class="step-label">Map Assessments</span>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step">
+                    <div class="step-bubble">3</div>
+                    <span class="step-label">Preview &amp; Download</span>
+                </div>
+            </div>
+
+            {% with messages = get_flashed_messages(category_filter=["error"]) %}
+            {% if messages %}
+            {% for msg in messages %}
+            <div class="ps-alert-error"><span class="material-icons-round" style="font-size:16px;vertical-align:-3px;margin-right:6px;">warning</span>{{ msg }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <!-- Two-column: upload + format hint -->
+            <div class="upload-cols">
+
+                <!-- Upload card -->
+                <div class="ps-card">
+                    <div class="ps-card-title">
+                        <span class="material-icons-round">upload_file</span>
+                        Upload Detailed Scores
+                    </div>
+                    <form method="POST" enctype="multipart/form-data" id="upload-form"
+                        action="{{ url_for('peace_upload') }}">
+                        <div class="drop-zone" id="drop-zone">
+                            <div class="drop-icon-wrap">
+                                <span class="material-icons-round">cloud_upload</span>
+                            </div>
+                            <label for="csv-file">
+                                <div class="drop-headline">
+                                    <span class="drop-link">Choose a file</span> or drag &amp; drop
+                                </div>
+                            </label>
+                            <div class="drop-sub">CSV only &middot; Max 16 MB</div>
+                            <input type="file" name="csv_file" id="csv-file" accept=".csv" required>
+                        </div>
+
+                        <div class="file-badge" id="file-badge">
+                            <span class="material-icons-round">check_circle</span>
+                            <span id="file-name-display"></span>
+                        </div>
+
+                        <button type="submit" class="ps-btn-primary" id="submit-btn" disabled>
+                            <span class="spinner" id="spinner"></span>
+                            <span class="material-icons-round" id="btn-icon">arrow_forward</span>
+                            <span id="btn-label">Upload &amp; Parse</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Format hint card -->
+                <div class="hint-card">
+                    <div class="ps-card-title">
+                        <span class="material-icons-round">info</span>
+                        Expected CSV Format
+                    </div>
+
+                    <div class="hint-row">
+                        <div class="hint-num">0</div>
+                        <div class="hint-content">
+                            <div class="hint-label">Column headers</div>
+                            <div class="hint-example">Surname, First Name, Email, 2.1.3.25/26 - HW 1, …</div>
+                        </div>
+                    </div>
+                    <div class="hint-row">
+                        <div class="hint-num">1</div>
+                        <div class="hint-content">
+                            <div class="hint-label">Date row</div>
+                            <div class="hint-example">Dates or blank per assessment column</div>
+                        </div>
+                    </div>
+                    <div class="hint-row">
+                        <div class="hint-num">2</div>
+                        <div class="hint-content">
+                            <div class="hint-label">Max points row</div>
+                            <div class="hint-example">20.0, 11.0, 100.0, …</div>
+                        </div>
+                    </div>
+                    <div class="hint-row">
+                        <div class="hint-num">3+</div>
+                        <div class="hint-content">
+                            <div class="hint-label">Student rows</div>
+                            <div class="hint-example">Mensah, Kofi, kofi@gcihs.edu.gh, 18.5, …</div>
+                        </div>
+                    </div>
+
+                    <div class="format-code-block">
+                        Assessment column pattern:<br>
+                        <code>T.W.L.YY/YY - Type Name</code><br>
+                        e.g. <code>2.1.3.25/26 - Homework 1</code>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('csv-file');
+        const dropZone  = document.getElementById('drop-zone');
+        const badge     = document.getElementById('file-badge');
+        const nameSpan  = document.getElementById('file-name-display');
+        const submitBtn = document.getElementById('submit-btn');
+        const spinner   = document.getElementById('spinner');
+        const btnIcon   = document.getElementById('btn-icon');
+        const btnLabel  = document.getElementById('btn-label');
+        const form      = document.getElementById('upload-form');
+
+        function showFile(name) {
+            nameSpan.textContent = name;
+            badge.style.display = 'flex';
+            submitBtn.disabled = false;
+        }
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) showFile(fileInput.files[0].name);
+        });
+
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('over');
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.endsWith('.csv')) {
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                fileInput.files = dt.files;
+                showFile(file.name);
+            } else {
+                alert('Please drop a .csv file.');
+            }
+        });
+
+        form.addEventListener('submit', () => {
+            submitBtn.disabled = true;
+            spinner.classList.add('active');
+            btnIcon.style.display = 'none';
+            btnLabel.textContent = 'Parsing…';
+        });
+    </script>
+</body>
+
+</html>

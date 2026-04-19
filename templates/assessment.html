@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Assessment Generator — EduTools</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <style>
+        /* ── Assessment-specific ── */
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr 660px;
+            gap: 0;
+            min-height: calc(100vh - 180px);
+            padding: 0 24px 60px;
+        }
+
+        /* Preview panel */
+        .preview-panel {
+            padding: 20px 20px 20px 16px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .preview-card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .preview-card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .preview-card-head h3 {
+            font-family: var(--font-head);
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .preview-card-head .material-icons-round {
+            font-size: 16px;
+            color: var(--teal);
+        }
+
+        .preview-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Upload within card */
+        .preview-upload {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .preview-upload .upload-zone {
+            max-width: 420px;
+            width: 100%;
+        }
+
+        /* Table */
+        .table-wrap {
+            overflow: auto;
+            flex: 1;
+        }
+
+        .preview-table {
+            /* border-collapse: collapse; */
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .preview-table th {
+            position: sticky;
+            top: 0;
+            /* z-index: 5; */
+            padding: 8px 14px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+            background: var(--navy);
+            color: var(--text-muted);
+        }
+
+        .preview-table td {
+            padding: 6px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            color: var(--text);
+        }
+
+        .preview-table tr:hover td {
+            background: var(--glass);
+        }
+
+        /* Column type headers */
+        .th-meta {
+            color: var(--text-muted) !important;
+        }
+
+        .th-std {
+            background: rgba(0, 191, 165, 0.15) !important;
+            color: var(--teal) !important;
+            border-bottom-color: var(--teal) !important;
+        }
+
+        .th-progressive {
+            background: rgba(251, 191, 36, 0.12) !important;
+            color: var(--amber) !important;
+        }
+
+        .th-ambiguous {
+            background: rgba(167, 139, 250, 0.12) !important;
+            color: var(--purple) !important;
+        }
+
+        .th-nonstandard {
+            background: rgba(251, 113, 133, 0.12) !important;
+            color: var(--rose) !important;
+        }
+
+        .col-frozen {
+            position: sticky;
+            left: 0;
+            background: var(--navy);
+            z-index: 5;
+            border-right: 1px solid var(--border);
+        }
+
+        /* Legend */
+        .table-legend {
+            display: flex;
+            gap: 14px;
+            padding: 10px 18px;
+            border-top: 1px solid var(--border);
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .legend-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+        }
+
+        /* Settings overlay */
+        .settings-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(6, 13, 26, 0.85);
+            backdrop-filter: var(--blur-md);
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .settings-box {
+            background: var(--glass-md);
+            border: 1px solid var(--border-hi);
+            border-radius: var(--radius-xl);
+            padding: 32px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .settings-box h3 {
+            font-family: var(--font-head);
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .settings-box p {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .settings-bar {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 18px;
+            background: rgba(0, 191, 165, 0.08);
+            border: 1px solid rgba(0, 191, 165, 0.2);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+
+        .settings-bar.show {
+            display: flex;
+        }
+
+        .settings-bar strong {
+            color: var(--teal);
+        }
+
+        .change-btn {
+            margin-left: auto;
+            background: none;
+            border: 1px solid var(--border-hi);
+            border-radius: 6px;
+            color: var(--text-muted);
+            font-size: 12px;
+            padding: 4px 10px;
+            cursor: pointer;
+            font-family: var(--font-body);
+            transition: all 0.2s;
+        }
+
+        .change-btn:hover {
+            color: var(--text);
+            border-color: var(--cyan);
+        }
+
+        /* Wizard panel */
+        .wizard-panel {
+            padding: 20px 16px 20px 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .wiz-card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .wiz-card-head {
+            padding: 11px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .wiz-card-head h3 {
+            font-family: var(--font-head);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .wiz-card-head .material-icons-round {
+            font-size: 16px;
+            color: var(--teal);
+        }
+
+        .wiz-card-body {
+            padding: 16px;
+        }
+
+        /* Mapping table */
+        .map-scroll {
+            overflow-x: auto;
+        }
+
+        .map-table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 480px;
+            font-size: 12px;
+        }
+
+        .map-table th {
+            padding: 7px 10px;
+            background: var(--glass-md);
+            color: var(--text-muted);
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        .map-table td {
+            padding: 5px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            vertical-align: middle;
+        }
+
+        .map-table tr:hover td {
+            background: var(--glass);
+        }
+
+        .map-table tr.conflict-row td {
+            background: rgba(251, 191, 36, 0.05);
+        }
+
+        .map-table tr.conflict-row td:first-child {
+            border-left: 2px solid var(--amber);
+        }
+
+        .map-row-standard td:first-child {
+            border-left: 2px solid var(--teal);
+        }
+
+        .map-row-progressive td:first-child {
+            border-left: 2px solid var(--amber);
+        }
+
+        .map-row-ambiguous td:first-child {
+            border-left: 2px solid var(--purple);
+        }
+
+        .map-row-nonstandard td:first-child {
+            border-left: 2px solid var(--rose);
+        }
+
+        .map-orig {
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-family: monospace;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .map-table input.map-week {
+            width: 46px;
+            padding: 4px 6px;
+            font-size: 11px;
+            text-align: center;
+        }
+
+        .map-table select.map-type {
+            min-width: 100px;
+            padding: 4px 6px;
+            font-size: 11px;
+        }
+
+        /* Category badge in map */
+        .cat-pill {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .cat-std {
+            background: rgba(0, 191, 165, 0.15);
+            color: var(--teal);
+        }
+
+        .cat-prog {
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--amber);
+        }
+
+        .cat-ambig {
+            background: rgba(167, 139, 250, 0.15);
+            color: var(--purple);
+        }
+
+        .cat-ns {
+            background: rgba(251, 113, 133, 0.15);
+            color: var(--rose);
+        }
+
+        /* Week chips */
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 8px 0;
+            min-height: 30px;
+        }
+
+        .chip {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: var(--glass);
+            color: var(--text-muted);
+            font-family: monospace;
+            transition: all 0.15s;
+        }
+
+        .chip:hover {
+            border-color: var(--teal);
+            color: var(--teal);
+        }
+
+        .chip.on {
+            background: var(--teal);
+            border-color: var(--teal);
+            color: var(--deep);
+            font-weight: 600;
+        }
+
+        .chip.custom-chip {
+            border-style: dashed;
+        }
+
+        .chip-remove {
+            margin-left: 4px;
+            opacity: 0.7;
+            cursor: pointer;
+        }
+
+        .chip-remove:hover {
+            opacity: 1;
+        }
+
+        /* Download results */
+        .dl-results {
+            margin-top: 16px;
+        }
+
+        .dl-zip-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            background: rgba(0, 191, 165, 0.1);
+            border: 1px solid rgba(0, 191, 165, 0.25);
+            border-radius: var(--radius-md);
+            margin-bottom: 12px;
+        }
+
+        .zip-label {
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--teal);
+            margin-bottom: 2px;
+        }
+
+        .zip-sub {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .dl-divider {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-dim);
+            margin: 12px 0 8px;
+        }
+
+        .dl-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .dl-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+        }
+
+        .dl-item .fname {
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .dl-item .fmeta {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* Empty state */
+        .wiz-empty {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 24px;
+            text-align: center;
+            color: var(--text-muted);
+            gap: 12px;
+        }
+
+        .wiz-empty .material-icons-round {
+            font-size: 40px;
+            color: var(--text-dim);
+        }
+
+        /* Conflict card */
+        .conflict-card {
+            border-color: rgba(251, 191, 36, 0.35) !important;
+        }
+
+        .conflict-card .wiz-card-head {
+            background: rgba(251, 191, 36, 0.08);
+        }
+
+        .conflict-card .wiz-card-head .material-icons-round {
+            color: var(--amber);
+        }
+
+        .conflict-item {
+            background: rgba(251, 191, 36, 0.06);
+            border: 1px solid rgba(251, 191, 36, 0.2);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            margin-top: 8px;
+        }
+
+        .conflict-cols {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        .col-tag {
+            display: inline-block;
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-family: monospace;
+            font-size: 11px;
+            color: var(--amber);
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 16px;
+            margin: 8px 0;
+        }
+
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            cursor: pointer;
+            margin: 0;
+            color: var(--text-muted);
+        }
+
+        .reassign-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed rgba(251, 191, 36, 0.3);
+            flex-wrap: wrap;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        @media (max-width: 900px) {
+            .workspace {
+                grid-template-columns: 1fr;
+                padding: 0 16px 80px;
+            }
+
+            .preview-panel {
+                padding: 0;
+            }
+
+            .wizard-panel {
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- <div class="bg-canvas" aria-hidden="true">
+        <div class="bg-orb" style="background:radial-gradient(circle,#00bfa5,transparent)"></div>
+        <div class="bg-orb" style="background:radial-gradient(circle,#00d4ff,transparent)"></div>
+        <div class="bg-orb" style="background:radial-gradient(circle,#a78bfa,transparent)"></div>
+    </div> -->
+
+    <!-- Island Navbar -->
+    <nav class="island-nav" aria-label="Main navigation">
+        <div class="nav-logo">
+            <span class="material-icons-round">school</span>
+        </div>
+        <div class="nav-divider"></div>
+        <a href="/" class="nav-item" data-tooltip="Home">
+            <span class="material-icons-round">home</span>
+        </a>
+        <a href="/group-generator" class="nav-item" data-tooltip="Group Generator">
+            <span class="material-icons-round">group_work</span>
+        </a>
+        <a href="/student-picker" class="nav-item" data-tooltip="Student Picker">
+            <span class="material-icons-round">how_to_reg</span>
+        </a>
+        <a href="/assessment-generator" class="nav-item active" data-tooltip="Assessment Generator">
+            <span class="material-icons-round">assignment</span>
+        </a>
+        <a href="/pdf-extractor" class="nav-item" data-tooltip="PDF Extractor">
+            <span class="material-icons-round">picture_as_pdf</span>
+        </a>
+        <a href="/peace-sheet" class="nav-item" data-tooltip="PEACE Sheet">
+            <span class="material-icons-round">table_chart</span>
+        </a>
+    </nav>
+
+    <div class="alert alert-error" id="errorAlert">
+        <span class="material-icons-round">error_outline</span>
+        <span id="errorMsg">Error</span>
+    </div>
+    <div class="alert alert-success" id="successAlert">
+        <span class="material-icons-round">check_circle</span>
+        <span id="successMsg">Done</span>
+    </div>
+
+    <div class="page-wrap">
+
+        <header class="page-header">
+            <div class="breadcrumb">
+                <a href="/"><span class="material-icons-round">home</span> Home</a>
+                <span class="material-icons-round">chevron_right</span>
+                <span>Assessment Generator</span>
+            </div>
+            <h1>Assessment Generator</h1>
+            <p>Parse Moodle-style gradebook CSV files and generate formatted weekly assessment output files.</p>
+        </header>
+
+        <div class="workspace">
+
+            <!-- LEFT: Preview Panel -->
+            <div class="preview-panel">
+
+                <div class="settings-bar" id="settingsBar">
+                    <span class="material-icons-round" style="font-size:16px;color:var(--teal)">filter_alt</span>
+                    <span>Filtering:</span>
+                    <strong id="settingsBarLabel"></strong>
+                    <button class="change-btn" onclick="openSettings()">
+                        <span class="material-icons-round" style="font-size:13px">edit</span> Change
+                    </button>
+                </div>
+
+                <div class="preview-card" style="position:relative">
+                    <div class="preview-card-head">
+                        <h3><span class="material-icons-round">table_view</span> File Preview</h3>
+                        <div class="preview-meta">
+                            <span id="previewMeta"></span>
+                            <span class="badge badge-teal" id="colCountPill" style="display:none"></span>
+                        </div>
+                    </div>
+
+                    <!-- Upload zone -->
+                    <div class="preview-upload" id="uploadZoneWrap">
+                        <div class="upload-zone" id="uploadZone">
+                            <span class="material-icons-round upload-icon" style="color:var(--teal)">assignment</span>
+                            <h3>Drop your gradebook CSV here</h3>
+                            <p>Moodle-style format: <code
+                                    style="font-family:monospace;font-size:11px">2.1.1.25/26 - Classwork 1</code></p>
+                            <input type="file" id="fileInput" accept=".csv" style="display:none" />
+                        </div>
+                        <button class="btn btn-glass btn-sm mt-3"
+                            onclick="document.getElementById('fileInput').click()">
+                            <span class="material-icons-round">folder_open</span> Browse
+                        </button>
+                    </div>
+
+                    <!-- Table -->
+                    <div class="table-wrap" id="tableWrap" style="display:none">
+                        <table class="preview-table" id="previewTable"></table>
+                    </div>
+
+                    <!-- Legend -->
+                    <div class="table-legend" id="tableLegend" style="display:none">
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background:var(--teal)"></div>Standard
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background:var(--amber)"></div>Progressive
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background:var(--purple)"></div>Ambiguous
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background:var(--rose)"></div>Non-standard
+                        </div>
+                    </div>
+
+                    <!-- Settings Overlay -->
+                    <div class="settings-overlay" id="settingsOverlay" style="display:none">
+                        <div class="settings-box">
+                            <h3>Settings</h3>
+                            <p>Select the term and academic year to work with. Only matching columns will be shown in
+                                the wizard.</p>
+                            <div class="badge badge-muted mb-4" id="settingsHint"
+                                style="display:block;padding:8px 12px;border-radius:8px;font-size:12px;line-height:1.5">
+                            </div>
+                            <div class="form-grid form-grid-2 mb-4">
+                                <div class="form-group">
+                                    <label>Academic Year</label>
+                                    <select id="settingsYear"></select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Term</label>
+                                    <select id="settingsTerm"></select>
+                                </div>
+                            </div>
+                            <div id="settingsWeekPreview"
+                                style="font-size:12px;color:var(--text-muted);margin-bottom:20px;min-height:18px"></div>
+                            <button class="btn btn-primary w-full" onclick="confirmSettings()">
+                                <span class="material-icons-round">check</span> Confirm and Preview
+                            </button>
+                        </div>
+                    </div>
+
+                </div><!-- /preview-card -->
+            </div><!-- /preview-panel -->
+
+            <!-- RIGHT: Wizard Panel -->
+            <div class="wizard-panel" id="wizardPanel">
+                <div class="wiz-empty">
+                    <span class="material-icons-round">cloud_upload</span>
+                    <p>Upload a CSV file to begin the wizard</p>
+                </div>
+            </div>
+
+        </div><!-- /workspace -->
+    </div>
+
+    <script>
+        'use strict';
+
+        const $ = id => document.getElementById(id);
+        const PROGRESSIVE_TYPES = ['MCQ', 'Essay', 'Mixed', 'Orals'];
+        const ALL_TYPES = ['Homework', 'Classwork', 'ClassTest', 'Project', 'MCQ', 'Essay', 'Mixed', 'Orals'];
+        const CAT_CLASS = {
+            standard: 'th-std', progressive: 'th-progressive',
+            ambiguous: 'th-ambiguous', nonstandard: 'th-nonstandard',
+            excluded: '', meta: 'th-meta'
+        };
+
+        let parsedData = null;
+        let activeSettings = { year: null, term: null };
+        let filteredData = null;
+
+        function showError(msg) {
+            $('errorMsg').textContent = msg;
+            const a = $('errorAlert');
+            a.classList.add('show');
+            setTimeout(() => a.classList.remove('show'), 5000);
+        }
+
+        function showSuccess(msg) {
+            $('successMsg').textContent = msg;
+            const a = $('successAlert');
+            a.classList.add('show');
+            setTimeout(() => a.classList.remove('show'), 3500);
+        }
+
+        // ── Upload ───────────────────────────────────────────────────────────
+        const uploadZone = $('uploadZone');
+        const fileInput = $('fileInput');
+
+        uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+        uploadZone.addEventListener('drop', e => {
+            e.preventDefault(); uploadZone.classList.remove('dragover');
+            if (e.dataTransfer.files[0]) doUpload(e.dataTransfer.files[0]);
+        });
+        uploadZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', () => { if (fileInput.files[0]) doUpload(fileInput.files[0]); });
+
+        async function doUpload(file) {
+            if (!file.name.toLowerCase().endsWith('.csv')) { showError('Please upload a CSV file.'); return; }
+            uploadZone.style.opacity = '.5';
+            const fd = new FormData();
+            fd.append('file', file);
+            try {
+                const resp = await fetch('/parse', { method: 'POST', body: fd });
+                if (!resp.headers.get('content-type')?.includes('application/json')) throw new Error('Server error');
+                const data = await resp.json();
+                if (data.error) throw new Error(data.error);
+                parsedData = data;
+                $('previewMeta').textContent = `${data.student_count} students \u00b7 ${data.filename}`;
+                populateSettingsOverlay(data);
+                openSettings();
+            } catch (e) {
+                showError(e.message);
+                uploadZone.style.opacity = '';
+            }
+        }
+
+        // ── Settings overlay ─────────────────────────────────────────────────
+        function populateSettingsOverlay(data) {
+            const yearSel = $('settingsYear');
+            const termSel = $('settingsTerm');
+            yearSel.innerHTML = data.years.map(y => `<option value="${y}">${y}</option>`).join('');
+            termSel.innerHTML = data.terms.map(t => `<option value="${t}">Term ${t}</option>`).join('');
+
+            const stdCount = data.standard_columns.length + data.progressive_columns.length + data.ambiguous_columns.length;
+            $('settingsHint').textContent =
+                `Found ${stdCount} structured columns across ${data.terms.length} term(s) and ${data.years.length} academic year(s), plus ${data.nonstandard_columns.length} non-standard column(s).`;
+
+            yearSel.addEventListener('change', updateWeekPreview);
+            termSel.addEventListener('change', updateWeekPreview);
+            updateWeekPreview();
+        }
+
+        function updateWeekPreview() {
+            if (!parsedData) return;
+            const year = $('settingsYear').value;
+            const term = parseInt($('settingsTerm').value);
+            const allCols = [...parsedData.standard_columns, ...parsedData.progressive_columns, ...parsedData.ambiguous_columns];
+            const matched = allCols.filter(c => c.year === year && c.term === term);
+            const weeks = [...new Set(matched.map(c => c.week))].sort((a, b) => a - b);
+            $('settingsWeekPreview').innerHTML = weeks.length
+                ? `Weeks available: ${weeks.map(w => `<strong>Week ${w}</strong>`).join(', ')}`
+                : `<span style="color:var(--rose)">No structured columns match this term/year combination.</span>`;
+        }
+
+        function openSettings() {
+            $('settingsOverlay').style.display = 'flex';
+        }
+
+        function confirmSettings() {
+            const year = $('settingsYear').value;
+            const term = parseInt($('settingsTerm').value);
+            activeSettings = { year, term };
+            $('settingsOverlay').style.display = 'none';
+            $('settingsBarLabel').textContent = `Term ${term} \u00b7 AY ${year}`;
+            $('settingsBar').classList.add('show');
+            filteredData = applyFilter(parsedData, year, term);
+            renderPreview(parsedData, filteredData);
+            renderWizard(filteredData);
+        }
+
+        // ── Filter ───────────────────────────────────────────────────────────
+        function applyFilter(data, year, term) {
+            const allCols = [...data.standard_columns, ...data.progressive_columns, ...data.ambiguous_columns];
+            const active_standard = data.standard_columns.filter(c => c.year === year && c.term === term);
+            const active_progressive = data.progressive_columns.filter(c => c.year === year && c.term === term);
+            const active_ambiguous = data.ambiguous_columns.filter(c => c.year === year && c.term === term);
+            const excluded = allCols.filter(c => !(c.year === year && c.term === term));
+            const nonstandard = data.nonstandard_columns;
+            const activeCols = [...active_standard, ...active_progressive, ...active_ambiguous, ...nonstandard];
+            const activeWeeks = [...new Set(activeCols.map(c => c.week).filter(Boolean))].sort((a, b) => a - b);
+            return {
+                ...data, standard_columns: active_standard, progressive_columns: active_progressive,
+                ambiguous_columns: active_ambiguous, nonstandard_columns: nonstandard,
+                excluded_columns: excluded, weeks: activeWeeks
+            };
+        }
+
+        // ── Preview table ────────────────────────────────────────────────────
+        function renderPreview(raw, filtered) {
+            $('uploadZoneWrap').style.display = 'none';
+            $('tableWrap').style.display = 'block';
+            $('tableLegend').style.display = 'flex';
+
+            const { headers: allHeaders, rows: allRows, cats: allCats } = raw.preview;
+            const visibleOriginals = new Set([
+                ...filtered.standard_columns, ...filtered.progressive_columns,
+                ...filtered.ambiguous_columns, ...filtered.nonstandard_columns,
+            ].map(c => c.original));
+
+            const keepIndices = allHeaders.reduce((acc, h, i) => {
+                if (allCats[i] === 'meta' || visibleOriginals.has(h)) acc.push(i);
+                return acc;
+            }, []);
+
+            const catForHeader = {};
+            const mark = (cols, cat) => cols.forEach(c => { catForHeader[c.original] = cat; });
+            mark(filtered.standard_columns, 'standard');
+            mark(filtered.progressive_columns, 'progressive');
+            mark(filtered.ambiguous_columns, 'ambiguous');
+            mark(filtered.nonstandard_columns, 'nonstandard');
+
+            const visHeaders = keepIndices.map(i => allHeaders[i]);
+            const visCats = keepIndices.map(i => allCats[i] === 'meta' ? 'meta' : (catForHeader[allHeaders[i]] || allCats[i]));
+
+            const pill = $('colCountPill');
+            pill.style.display = 'inline-block';
+            const assessmentCount = visCats.filter(c => c !== 'meta').length;
+            pill.textContent = `${assessmentCount} shown \u00b7 ${(filtered.excluded_columns || []).length} excluded`;
+
+            const tbl = $('previewTable');
+            tbl.innerHTML = '';
+            const FROZEN = 2;
+
+            const thead = document.createElement('thead');
+            const hr = document.createElement('tr');
+            visHeaders.forEach((h, vi) => {
+                const th = document.createElement('th');
+                th.textContent = h;
+                th.className = (vi < FROZEN ? 'col-frozen ' : '') + (CAT_CLASS[visCats[vi]] || '');
+                hr.appendChild(th);
+            });
+            thead.appendChild(hr);
+
+            const tbody = document.createElement('tbody');
+            allRows.forEach(fullRow => {
+                const tr = document.createElement('tr');
+                keepIndices.forEach((ki, vi) => {
+                    const td = document.createElement('td');
+                    td.textContent = (fullRow[ki] || '').trim() || '\u2014';
+                    if (vi < FROZEN) td.className = 'col-frozen';
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+
+            tbl.appendChild(thead);
+            tbl.appendChild(tbody);
+
+            requestAnimationFrame(() => {
+                let offset = 0;
+                const allRows2 = [hr, ...tbody.querySelectorAll('tr')];
+                for (let fi = 0; fi < FROZEN; fi++) {
+                    allRows2.forEach(row => {
+                        const cell = row.children[fi];
+                        if (cell) cell.style.left = offset + 'px';
+                    });
+                    offset += hr.children[fi] ? hr.children[fi].offsetWidth : 0;
+                }
+            });
+        }
+
+        // ── Wizard ───────────────────────────────────────────────────────────
+        function renderWizard(data) {
+            const panel = $('wizardPanel');
+            panel.innerHTML = '';
+            panel.appendChild(makeInfoCard(data));
+            panel.appendChild(makeMappingCard(data));
+            if ((data.excluded_columns || []).length > 0) panel.appendChild(makeExcludedCard(data.excluded_columns));
+            const conflictHolder = document.createElement('div');
+            conflictHolder.id = 'conflictCard';
+            panel.appendChild(conflictHolder);
+            panel.appendChild(makeGenerateCard(data));
+            panel.addEventListener('input', onMappingChange);
+            panel.addEventListener('change', onMappingChange);
+            onMappingChange();
+        }
+
+        function onMappingChange() {
+            recomputeConflicts();
+            syncWeekChips();
+        }
+
+        function el(tag, cls) {
+            const e = document.createElement(tag);
+            if (cls) e.className = cls;
+            return e;
+        }
+
+        function escHtml(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function makeInfoCard(data) {
+            const totalActive = data.standard_columns.length + data.progressive_columns.length +
+                data.ambiguous_columns.length + data.nonstandard_columns.length;
+            const card = el('div', 'wiz-card');
+            card.innerHTML = `
+    <div class="wiz-card-head"><span class="material-icons-round">info</span><h3>File Settings</h3></div>
+    <div class="wiz-card-body">
+      <div class="stat-row mb-4">
+        <div class="stat-item"><div class="stat-value">${data.student_count}</div><div class="stat-label">Students</div></div>
+        <div class="stat-item"><div class="stat-value">${totalActive}</div><div class="stat-label">Active Cols</div></div>
+        <div class="stat-item"><div class="stat-value">${(data.excluded_columns || []).length}</div><div class="stat-label">Excluded</div></div>
+      </div>
+      <div class="form-grid form-grid-2">
+        <div class="form-group"><label>Class Name</label><input type="text" id="className" value="${escHtml(data.class_name)}" /></div>
+        <div class="form-group"><label>Subject ID</label><input type="text" id="subjectId" value="${escHtml(data.subject_id)}" /></div>
+      </div>
+    </div>`;
+            return card;
+        }
+
+        function makeMappingCard(data) {
+            const rows = [
+                ...data.standard_columns.map(c => ({ ...c, cat: 'standard' })),
+                ...data.progressive_columns.map(c => ({ ...c, cat: 'progressive' })),
+                ...data.ambiguous_columns.map(c => ({ ...c, cat: 'ambiguous' })),
+                ...data.nonstandard_columns.map(c => ({ ...c, cat: 'nonstandard' })),
+            ].sort((a, b) => ((a.week || 999) - (b.week || 999)) || ((a.lesson || 0) - (b.lesson || 0)));
+
+            const card = el('div', 'wiz-card');
+            const totalRows = rows.length;
+            const headDiv = el('div', 'wiz-card-head');
+            headDiv.innerHTML = `<span class="material-icons-round">map</span><h3>Assessment Mapping</h3><span class="badge badge-teal" style="margin-left:8px">${totalRows}</span>`;
+            card.appendChild(headDiv);
+
+            if (!totalRows) {
+                const empty = el('div', 'wiz-card-body');
+                empty.innerHTML = '<p class="text-muted">No active assessments for the selected term/year.</p>';
+                card.appendChild(empty);
+                return card;
+            }
+
+            const banner = el('div');
+            banner.style.cssText = 'padding:8px 14px;background:rgba(0,191,165,0.06);border-bottom:1px solid var(--border);font-size:11px;color:var(--text-muted);line-height:1.5';
+            banner.innerHTML = 'Set <strong>Target Week</strong> and <strong>Target Type</strong> for each row. <em>Progressive</em> and <em>Ambiguous</em> rows require a type. Select <em>Ignore</em> to skip.';
+            card.appendChild(banner);
+
+            const scrollWrap = el('div', 'map-scroll');
+            const tbl = el('table', 'map-table');
+            tbl.id = 'mappingTable';
+            tbl.innerHTML = `<thead><tr>
+    <th style="width:34%">Assessment</th>
+    <th style="width:14%">Category</th>
+    <th style="width:11%;text-align:center">Wk</th>
+    <th style="width:12%;text-align:center">Target Wk</th>
+    <th>Type</th>
+  </tr></thead>`;
+            const tbody = el('tbody');
+            tbody.id = 'mappingTbody';
+
+            const catPill = { standard: 'cat-std', progressive: 'cat-prog', ambiguous: 'cat-ambig', nonstandard: 'cat-ns' };
+            const catLabel = { standard: 'Standard', progressive: 'Progressive', ambiguous: 'Ambiguous', nonstandard: 'Non-std' };
+
+            rows.forEach(col => {
+                const tr = el('tr', `map-row-${col.cat}`);
+                tr.dataset.sourceIndex = col.index;
+                tr.dataset.original = col.original;
+                tr.dataset.cat = col.cat;
+
+                const defaultWeek = col.week || '';
+                let defaultType = col.cat === 'standard' ? (col.atype || '') : '';
+
+                const typeOptions = col.cat === 'progressive'
+                    ? ['', ...PROGRESSIVE_TYPES, 'ignore']
+                    : ['', ...ALL_TYPES, 'ignore'];
+
+                const typeOpts = typeOptions.map(t =>
+                    !t ? `<option value="">— Select —</option>`
+                        : t === 'ignore' ? `<option value="ignore">Skip</option>`
+                            : `<option value="${t}" ${defaultType === t ? 'selected' : ''}>${t}</option>`
+                ).join('');
+
+                tr.innerHTML = `
+      <td><div class="map-orig" title="${escHtml(col.original)}">${escHtml(col.original)}</div></td>
+      <td><span class="cat-pill ${catPill[col.cat]}">${catLabel[col.cat]}</span></td>
+      <td style="text-align:center;color:var(--text-muted);font-family:monospace;font-size:11px">${defaultWeek || '\u2014'}</td>
+      <td style="text-align:center"><input class="map-week" type="number" min="1" max="52" value="${defaultWeek}" placeholder="?" /></td>
+      <td><select class="map-type" style="${!defaultType ? 'border-color:rgba(251,191,36,0.6)' : ''}">${typeOpts}</select></td>`;
+
+                const wI = tr.querySelector('.map-week');
+                const tS = tr.querySelector('.map-type');
+                const nW = col.cat === 'nonstandard';
+                const nT = col.cat !== 'standard';
+                wI.addEventListener('input', () => { wI.style.borderColor = (nW && !wI.value) ? 'rgba(251,191,36,0.6)' : ''; });
+                tS.addEventListener('change', () => { tS.style.borderColor = (nT && !tS.value) ? 'rgba(251,191,36,0.6)' : ''; });
+                tbody.appendChild(tr);
+            });
+
+            tbl.appendChild(tbody);
+            scrollWrap.appendChild(tbl);
+            card.appendChild(scrollWrap);
+            return card;
+        }
+
+        function makeExcludedCard(cols) {
+            const card = el('div', 'wiz-card');
+            card.style.opacity = '0.65';
+            card.innerHTML = `
+    <div class="wiz-card-head" style="background:var(--glass)">
+      <span class="material-icons-round" style="color:var(--text-dim)">block</span>
+      <h3 style="color:var(--text-muted)">Excluded Columns</h3>
+      <span class="badge badge-muted" style="margin-left:8px">${cols.length}</span>
+    </div>
+    <div class="wiz-card-body">
+      <p class="text-muted" style="margin-bottom:10px;font-size:12px">From a different term or academic year — not included in generation.</p>
+      ${cols.map(c => `<span style="display:inline-block;font-family:monospace;font-size:11px;background:var(--glass);border:1px solid var(--border);border-radius:4px;padding:2px 8px;margin:2px;color:var(--text-muted)">${escHtml(c.original)}</span>`).join('')}
+    </div>`;
+            return card;
+        }
+
+        function makeGenerateCard(data) {
+            const card = el('div', 'wiz-card');
+            card.id = 'generateCard';
+            const weeksHtml = (data.weeks || []).map(w =>
+                `<button class="chip on" data-week="${w}" onclick="this.classList.toggle('on')">W${w}</button>`
+            ).join('') || '';
+
+            card.innerHTML = `
+    <div class="wiz-card-head"><span class="material-icons-round">download</span><h3>Generate Weekly Files</h3></div>
+    <div class="wiz-card-body">
+      <label style="margin-bottom:6px">Detected Weeks</label>
+      <div class="chips" id="weekChips">
+        ${weeksHtml || '<span class="text-muted" style="font-size:12px">No weeks detected for selected term/year.</span>'}
+      </div>
+      <div class="flex items-center gap-3 mt-2 mb-4" style="flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--text-muted)">Add week:</span>
+        <input type="number" id="customWeekInput" min="1" max="52" placeholder="e.g. 6"
+          onkeydown="if(event.key==='Enter')addCustomWeek()"
+          style="width:70px" />
+        <button class="btn btn-glass btn-sm" onclick="addCustomWeek()">
+          <span class="material-icons-round">add</span> Add
+        </button>
+        <span id="customWeekHint" style="font-size:12px;transition:color .2s"></span>
+      </div>
+      <button class="btn btn-primary w-full" id="genBtn" onclick="doGenerate()">
+        <span class="material-icons-round">electric_bolt</span>
+        <span id="genBtnText">Generate Weekly Assessment File(s)</span>
+      </button>
+      <div id="dlList" class="dl-results"></div>
+    </div>`;
+            return card;
+        }
+
+        function addCustomWeek() {
+            const input = $('customWeekInput');
+            const hint = $('customWeekHint');
+            const val = parseInt(input.value);
+            if (!val || val < 1 || val > 52) {
+                hint.textContent = 'Enter a week between 1 and 52.';
+                hint.style.color = 'var(--rose)';
+                return;
+            }
+            const existing = document.querySelector(`#weekChips .chip[data-week="${val}"]`);
+            if (existing) {
+                existing.style.outline = '2px solid var(--amber)';
+                setTimeout(() => existing.style.outline = '', 1200);
+                hint.textContent = `Week ${val} already listed.`;
+                hint.style.color = 'var(--amber)';
+                input.value = '';
+                return;
+            }
+            const chip = el('button', 'chip on custom-chip');
+            chip.dataset.week = val;
+            chip.innerHTML = `W${val} <span class="chip-remove" onclick="removeChip(this)" title="Remove">&times;</span>`;
+            chip.addEventListener('click', e => { if (!e.target.classList.contains('chip-remove')) chip.classList.toggle('on'); });
+            $('weekChips').appendChild(chip);
+            hint.textContent = `Week ${val} added.`;
+            hint.style.color = 'var(--teal)';
+            input.value = '';
+            setTimeout(() => hint.textContent = '', 2500);
+        }
+
+        function removeChip(btn) { btn.closest('.chip').remove(); }
+
+        function getCurrentMappings() {
+            const map = [];
+            const tbody = $('mappingTbody');
+            if (!tbody) return map;
+            tbody.querySelectorAll('tr').forEach(tr => {
+                const si = parseInt(tr.dataset.sourceIndex);
+                const orig = tr.dataset.original || '';
+                const week = parseInt(tr.querySelector('.map-week')?.value);
+                const type = tr.querySelector('.map-type')?.value || '';
+                if (!type || type === 'ignore' || !week) {
+                    map.push({ source_index: si, action: 'skip' });
+                } else {
+                    map.push({ source_index: si, original: orig, output_week: week, output_type: type, action: 'include' });
+                }
+            });
+            return map;
+        }
+
+        function detectConflicts(map) {
+            const groups = {};
+            for (const cm of map) {
+                if (cm.action === 'skip') continue;
+                const key = `${cm.output_week}__${cm.output_type}`;
+                (groups[key] = groups[key] || []).push(cm);
+            }
+            return Object.entries(groups)
+                .filter(([, cols]) => cols.length > 1)
+                .map(([key, cols]) => {
+                    const [week, type] = key.split('__');
+                    return { key, week: parseInt(week), type, columns: cols };
+                });
+        }
+
+        function recomputeConflicts() {
+            const map = getCurrentMappings();
+            const conflicts = detectConflicts(map);
+            const tbody = $('mappingTbody');
+            if (tbody) {
+                const ci = new Set(conflicts.flatMap(c => c.columns.map(cm => cm.source_index)));
+                tbody.querySelectorAll('tr').forEach(tr => tr.classList.toggle('conflict-row', ci.has(parseInt(tr.dataset.sourceIndex))));
+            }
+            renderConflictCard(conflicts);
+        }
+
+        function syncWeekChips() {
+            const map = getCurrentMappings();
+            const chips = $('weekChips');
+            if (!chips) return;
+            const activeWeeks = new Set(map.filter(cm => cm.action !== 'skip').map(cm => cm.output_week).filter(Boolean));
+            chips.querySelectorAll('.chip').forEach(chip => {
+                const w = parseInt(chip.dataset.week);
+                if (!chip.classList.contains('custom-chip')) {
+                    chip.classList.toggle('on', activeWeeks.has(w));
+                }
+            });
+        }
+
+        function renderConflictCard(conflicts) {
+            const container = $('conflictCard');
+            if (!conflicts.length) { container.innerHTML = ''; return; }
+
+            const card = el('div', 'wiz-card conflict-card');
+            const head = el('div', 'wiz-card-head');
+            head.innerHTML = `<span class="material-icons-round">warning</span><h3>${conflicts.length} Conflict(s) Detected</h3>`;
+            card.appendChild(head);
+
+            const body = el('div', 'wiz-card-body');
+
+            conflicts.forEach(conflict => {
+                const div = el('div', 'conflict-item');
+                div.innerHTML = `<div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--amber)">Week ${conflict.week} \u00b7 ${conflict.type}</div>`;
+
+                const colsDiv = el('div', 'conflict-cols');
+                conflict.columns.forEach(cm => {
+                    const s = el('span', 'col-tag');
+                    s.title = cm.original;
+                    s.textContent = cm.original.length > 25 ? cm.original.slice(0, 25) + '\u2026' : cm.original;
+                    colsDiv.appendChild(s);
+                });
+                div.appendChild(colsDiv);
+
+                const prevAction = document.querySelector(`input[name="conflict_action_${conflict.key}"]:checked`)?.value || 'sum';
+                const radioDiv = el('div', 'radio-group');
+                radioDiv.innerHTML = `
+      <label><input type="radio" name="conflict_action_${conflict.key}" value="sum" ${prevAction === 'sum' ? 'checked' : ''}> Sum all scores</label>
+      <label><input type="radio" name="conflict_action_${conflict.key}" value="reassign" ${prevAction === 'reassign' ? 'checked' : ''}> Reassign</label>`;
+                div.appendChild(radioDiv);
+
+                const reassignDiv = el('div');
+                reassignDiv.style.display = prevAction === 'reassign' ? 'block' : 'none';
+                conflict.columns.slice(1).forEach((cm, i) => {
+                    const rRow = el('div', 'reassign-row');
+                    const prevWeek = document.getElementById(`reassign_week_${conflict.key}_${i}`)?.value || conflict.week;
+                    const prevType = document.getElementById(`reassign_type_${conflict.key}_${i}`)?.value || conflict.type;
+                    rRow.innerHTML = `
+        <span style="font-family:monospace;font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted)">${escHtml(cm.original)}</span>
+        <span>Week:</span>
+        <input id="reassign_week_${conflict.key}_${i}" type="number" min="1" max="52" value="${prevWeek}" style="width:54px;padding:4px;font-size:11px" />
+        <span>Type:</span>
+        <select id="reassign_type_${conflict.key}_${i}" style="font-size:11px;padding:4px">
+          ${ALL_TYPES.map(t => `<option value="${t}" ${prevType === t ? 'selected' : ''}>${t}</option>`).join('')}
+        </select>`;
+                    reassignDiv.appendChild(rRow);
+                });
+
+                div.querySelectorAll(`input[name="conflict_action_${conflict.key}"]`).forEach(r => {
+                    r.addEventListener('change', () => { reassignDiv.style.display = r.value === 'reassign' ? 'block' : 'none'; });
+                });
+                div.appendChild(reassignDiv);
+                body.appendChild(div);
+            });
+
+            card.appendChild(body);
+            container.innerHTML = '';
+            container.appendChild(card);
+        }
+
+        function buildFinalColumnMap() {
+            const map = getCurrentMappings();
+            detectConflicts(map).forEach(conflict => {
+                const action = document.querySelector(`input[name="conflict_action_${conflict.key}"]:checked`)?.value || 'sum';
+                if (action === 'sum') {
+                    conflict.columns.forEach(cm => cm.conflict_action = 'sum');
+                } else {
+                    conflict.columns[0].conflict_action = 'first';
+                    conflict.columns.slice(1).forEach((cm, i) => {
+                        const newWeek = parseInt(document.getElementById(`reassign_week_${conflict.key}_${i}`)?.value);
+                        const newType = document.getElementById(`reassign_type_${conflict.key}_${i}`)?.value;
+                        if (newWeek && newType) { cm.output_week = newWeek; cm.output_type = newType; cm.conflict_action = 'first'; }
+                        else { cm.action = 'skip'; }
+                    });
+                }
+            });
+            return map;
+        }
+
+        async function doGenerate() {
+            const selectedWeeks = [...document.querySelectorAll('#weekChips .chip.on')].map(b => parseInt(b.dataset.week));
+            if (!selectedWeeks.length) { showError('Please select at least one week.'); return; }
+            const genBtn = $('genBtn');
+            genBtn.disabled = true;
+            $('genBtnText').textContent = 'Generating\u2026';
+            $('dlList').innerHTML = '';
+            try {
+                const resp = await fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        file_key: filteredData.file_key,
+                        class_name: $('className').value.trim(),
+                        subject_id: $('subjectId').value.trim(),
+                        weeks: selectedWeeks,
+                        column_map: buildFinalColumnMap(),
+                    }),
+                });
+                if (!resp.headers.get('content-type')?.includes('application/json')) throw new Error(`Server error ${resp.status}`);
+                const data = await resp.json();
+                if (data.error) throw new Error(data.error);
+
+                const results = $('dlList');
+                results.innerHTML = '';
+                const fileKeys = data.files.map(f => f.key);
+                const isMulti = data.files.length > 1;
+
+                if (isMulti) {
+                    const zipBar = el('div', 'dl-zip-bar');
+                    zipBar.innerHTML = `
+        <div><div class="zip-label">All ${data.files.length} files ready</div><div class="zip-sub">Download everything in one ZIP archive</div></div>
+        <button class="btn btn-glass btn-sm" onclick="downloadZip(${JSON.stringify(fileKeys)})">
+          <span class="material-icons-round">folder_zip</span> Download ZIP
+        </button>`;
+                    results.appendChild(zipBar);
+                }
+
+                const divider = el('div', 'dl-divider');
+                divider.textContent = isMulti ? 'Or download individually' : 'File ready';
+                results.appendChild(divider);
+
+                const list = el('div', 'dl-list');
+                data.files.forEach(file => {
+                    const item = el('div', 'dl-item');
+                    item.innerHTML = `
+        <div>
+          <div class="fname">${file.filename}</div>
+          <div class="fmeta">${file.students} students \u00b7 Week ${file.week}</div>
+        </div>
+        <button class="btn btn-glass btn-sm" onclick="triggerDownload('/download/${file.key}','${file.filename}')">
+          <span class="material-icons-round">download</span>
+        </button>`;
+                    list.appendChild(item);
+                });
+                results.appendChild(list);
+
+                if (isMulti) downloadZip(fileKeys);
+                else triggerDownload('/download/' + data.files[0].key, data.files[0].filename);
+                showSuccess('Files generated successfully');
+            } catch (e) {
+                showError(e.message);
+            } finally {
+                genBtn.disabled = false;
+                $('genBtnText').textContent = 'Generate Weekly Assessment File(s)';
+            }
+        }
+
+        function triggerDownload(url, filename) {
+            const a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        }
+
+        async function downloadZip(keys) {
+            try {
+                const resp = await fetch('/download-zip', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ keys }),
+                });
+                if (!resp.ok) throw new Error('ZIP failed');
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = 'weekly_assessments.zip';
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                showError('ZIP download failed. Try individual files.');
+            }
+        }
+    </script>
+</body>
+
+</html>

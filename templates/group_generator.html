@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Group Generator — EduTools</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        .members-panel {
+            max-height: 220px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            padding: 14px;
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+        }
+
+        .member-chip {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px;
+            background: var(--glass-md);
+            border-radius: 6px;
+            font-size: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .member-chip .sex-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .sex-dot.m {
+            background: var(--cyan);
+        }
+
+        .sex-dot.f {
+            background: var(--rose);
+        }
+
+        .groups-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .group-card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+
+        .group-card:hover {
+            border-color: var(--border-hi);
+        }
+
+        .group-card-head {
+            padding: 10px 14px;
+            background: var(--glass-md);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .group-card-head .group-num {
+            font-family: var(--font-head);
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--cyan);
+        }
+
+        .group-card-head .group-meta {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .group-card-body {
+            padding: 12px 14px;
+        }
+
+        .group-card-body li {
+            list-style: none;
+            font-size: 13px;
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .group-card-body li:last-child {
+            border-bottom: none;
+        }
+
+        .group-card-body li::before {
+            content: '';
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--cyan);
+            flex-shrink: 0;
+            opacity: 0.6;
+        }
+
+        .content-panel {
+            display: grid;
+            grid-template-columns: 35% 65%;
+            gap: 24px;
+            align-items: start;
+            padding: 24px 40px;
+        }
+
+        .left-column,
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .panel-card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .panel-card h3 {
+            font-family: var(--font-head);
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-card h3 .material-icons-round {
+            font-size: 18px;
+            color: var(--cyan);
+        }
+
+        @media (max-width: 640px) {
+            .content-panel {
+                padding: 16px 16px;
+            }
+
+            .members-panel {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- <div class="bg-canvas" aria-hidden="true">
+        <div class="bg-orb"></div>
+        <div class="bg-orb"></div>
+        <div class="bg-orb"></div>
+    </div> -->
+
+    <!-- Island Navbar -->
+    <nav class="island-nav" aria-label="Main navigation">
+        <div class="nav-logo">
+            <span class="material-icons-round">school</span>
+        </div>
+        <div class="nav-divider"></div>
+        <a href="/" class="nav-item" data-tooltip="Home">
+            <span class="material-icons-round">home</span>
+        </a>
+        <a href="/group-generator" class="nav-item active" data-tooltip="Group Generator">
+            <span class="material-icons-round">group_work</span>
+        </a>
+        <a href="/student-picker" class="nav-item" data-tooltip="Student Picker">
+            <span class="material-icons-round">how_to_reg</span>
+        </a>
+        <a href="/assessment-generator" class="nav-item" data-tooltip="Assessment Generator">
+            <span class="material-icons-round">assignment</span>
+        </a>
+        <a href="/pdf-extractor" class="nav-item" data-tooltip="PDF Extractor">
+            <span class="material-icons-round">picture_as_pdf</span>
+        </a>
+        <a href="/peace-sheet" class="nav-item" data-tooltip="PEACE Sheet">
+            <span class="material-icons-round">table_chart</span>
+        </a>
+    </nav>
+    <div class="alert alert-error" id="errorAlert">
+        <span class="material-icons-round">error_outline</span>
+        <span id="errorMsg">Error</span>
+    </div>
+    <div class="alert alert-success" id="successAlert">
+        <span class="material-icons-round">check_circle</span>
+        <span id="successMsg">Done</span>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-overlay" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="page-wrap">
+
+        <!-- Page Header -->
+        <header class="page-header">
+            <div class="breadcrumb">
+                <a href="/"><span class="material-icons-round">home</span> Home</a>
+                <span class="material-icons-round">chevron_right</span>
+                <span>Group Generator</span>
+            </div>
+            <h1>Group Generator</h1>
+            <p>Upload your class list and create balanced, randomised student groups with gender distribution.</p>
+        </header>
+
+        <div class="content-panel">
+
+            <div class="left-column">
+                <!-- Step 1: Context -->
+                <div class="panel-card">
+                    <h3><span class="material-icons-round">info</span> Class Details</h3>
+                    <div class="form-grid form-grid-3">
+                        <div class="form-group">
+                            <label>Class Name</label>
+                            <input type="text" id="classInput" placeholder="e.g. 7A" />
+                        </div>
+                        <div class="form-group">
+                            <label>Subject</label>
+                            <input type="text" id="subjectInput" placeholder="e.g. Mathematics" />
+                        </div>
+                        <div class="form-group">
+                            <label>Topic / Activity</label>
+                            <input type="text" id="topicInput" placeholder="e.g. Group Discussion" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Upload -->
+                <div class="panel-card">
+                    <h3><span class="material-icons-round">upload_file</span> Upload Class List</h3>
+                    <div class="upload-zone" id="uploadBox">
+                        <span class="material-icons-round upload-icon">water_drop</span>
+                        <h3>Drop your CSV file here</h3>
+                        <p>or click to browse — format: ID, Surname, First Name, Sex (M/F)</p>
+                        <div class="file-name-display" id="fileName"></div>
+                    </div>
+                    <input type="file" id="fileInput" accept=".csv" style="display:none" />
+                    <div class="flex gap-3 mt-3">
+                        <button class="btn btn-glass btn-sm" onclick="document.getElementById('fileInput').click()">
+                            <span class="material-icons-round">folder_open</span> Browse
+                        </button>
+                        <button class="btn btn-glass btn-sm" id="downloadTemplate">
+                            <span class="material-icons-round">download</span> Download Template
+                        </button>
+                    </div>
+
+                    <!-- Members preview -->
+                    <div id="membersContainer" class="hidden mt-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="section-label" style="margin:0">Loaded Students</div>
+                            <span class="badge badge-cyan" id="memberCountBadge">0</span>
+                            <div class="flex gap-2 ml-auto">
+                                <span class="badge badge-cyan" id="mCount">0 M</span>
+                                <span class="badge badge-rose" id="fCount">0 F</span>
+                            </div>
+                        </div>
+                        <div class="members-panel" id="membersList"></div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Configure -->
+                <div class="panel-card hidden" id="configSection">
+                    <h3><span class="material-icons-round">tune</span> Group Settings</h3>
+                    <div class="form-grid form-grid-2">
+                        <div class="form-group">
+                            <label>Number of Groups</label>
+                            <input type="number" id="numGroups" min="1" value="4" />
+                        </div>
+                        <div class="form-group" style="display:flex;align-items:flex-end;padding-bottom:2px">
+                            <label class="checkbox-wrap" style="margin:0">
+                                <input type="checkbox" id="createExtraGroup" />
+                                <span>Allow extra group for remainders</span>
+                            </label>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="generateBtn">
+                        <span class="material-icons-round">shuffle</span> Generate Groups
+                    </button>
+                </div>
+            </div>
+
+            <div class="right-column">
+                <!-- Results -->
+                <div id="resultsSection" class="hidden">
+                    <div class="panel-card">
+                        <h3><span class="material-icons-round">grid_view</span> Generated Groups</h3>
+                        <div class="stat-row mb-4" id="groupStats"></div>
+                        <p id="groupNote" class="text-muted mb-4" style="display:none"></p>
+                        <div class="groups-grid" id="groupsContainer"></div>
+                    </div>
+
+                    <!-- Export -->
+                    <div class="flex gap-3 mt-2">
+                        <button class="btn btn-primary" id="exportPDF">
+                            <span class="material-icons-round">picture_as_pdf</span> Export PDF
+                        </button>
+                        <button class="btn btn-glass" id="exportCSV">
+                            <span class="material-icons-round">table_chart</span> Export CSV
+                        </button>
+                        <button class="btn btn-glass" id="regenerateBtn">
+                            <span class="material-icons-round">refresh</span> Regenerate
+                        </button>
+                        <button class="btn btn-danger" id="resetBtn">
+                            <span class="material-icons-round">restart_alt</span> Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let students = [];
+        const loading = document.getElementById('loading');
+        const fileInput = document.getElementById('fileInput');
+
+        function showError(msg) {
+            document.getElementById('errorMsg').textContent = msg;
+            const a = document.getElementById('errorAlert');
+            a.classList.add('show');
+            setTimeout(() => a.classList.remove('show'), 5000);
+        }
+
+        function showSuccess(msg) {
+            document.getElementById('successMsg').textContent = msg;
+            const a = document.getElementById('successAlert');
+            a.classList.add('show');
+            setTimeout(() => a.classList.remove('show'), 3500);
+        }
+
+        // Upload zone
+        const uploadBox = document.getElementById('uploadBox');
+        ['dragover', 'dragenter'].forEach(e => uploadBox.addEventListener(e, ev => { ev.preventDefault(); uploadBox.classList.add('dragover'); }));
+        ['dragleave', 'dragend', 'drop'].forEach(e => uploadBox.addEventListener(e, ev => { ev.preventDefault(); uploadBox.classList.remove('dragover'); }));
+        uploadBox.addEventListener('drop', e => { if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+        uploadBox.addEventListener('click', () => fileInput.click());
+        fileInput.onchange = e => { if (e.target.files[0]) handleFile(e.target.files[0]); };
+
+        function handleFile(file) {
+            if (!file.name.toLowerCase().endsWith('.csv')) return showError('Please upload a CSV file');
+            const fd = new FormData();
+            fd.append('file', file);
+            loading.classList.add('show');
+            fetch('/upload', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(data => {
+                    loading.classList.remove('show');
+                    if (data.error) return showError(data.error);
+                    students = data.students;
+                    document.getElementById('fileName').textContent = file.name;
+                    document.getElementById('fileName').style.display = 'block';
+                    document.getElementById('memberCountBadge').textContent = data.count;
+                    const m = students.filter(s => s.sex === 'M').length;
+                    const f = students.filter(s => s.sex === 'F').length;
+                    document.getElementById('mCount').textContent = m + ' M';
+                    document.getElementById('fCount').textContent = f + ' F';
+                    renderMembers();
+                    document.getElementById('membersContainer').classList.remove('hidden');
+                    document.getElementById('configSection').classList.remove('hidden');
+                    document.getElementById('numGroups').value = Math.max(1, Math.ceil(data.count / 6));
+                    showSuccess(data.count + ' students loaded');
+                })
+                .catch(() => { loading.classList.remove('show'); showError('Upload failed'); });
+        }
+
+        function renderMembers() {
+            document.getElementById('membersList').innerHTML = students.map(s => `
+      <div class="member-chip">
+        <div class="sex-dot ${s.sex.toLowerCase()}"></div>
+        <span>${s.name}</span>
+      </div>
+    `).join('');
+        }
+
+        document.getElementById('generateBtn').onclick = generateGroups;
+        document.getElementById('regenerateBtn').onclick = generateGroups;
+
+        function generateGroups() {
+            const n = parseInt(document.getElementById('numGroups').value);
+            const extra = document.getElementById('createExtraGroup').checked;
+            if (!students.length) return showError('Upload a class list first');
+            if (n < 1 || n > Math.floor(students.length / 2)) return showError('Invalid number of groups');
+            loading.classList.add('show');
+            document.getElementById('generateBtn').disabled = true;
+            fetch('/generate-groups', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ students, num_groups: n, create_extra_group: extra })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    loading.classList.remove('show');
+                    document.getElementById('generateBtn').disabled = false;
+                    if (data.error) return showError(data.error);
+                    renderGroups(data.groups, data.note);
+                    document.getElementById('resultsSection').classList.remove('hidden');
+                    showSuccess('Groups generated successfully');
+                });
+        }
+
+        function renderGroups(groups, note) {
+            const totalM = groups.reduce((s, g) => s + g.males, 0);
+            const totalF = groups.reduce((s, g) => s + g.females, 0);
+            document.getElementById('groupStats').innerHTML = `
+      <div class="stat-item"><div class="stat-value">${groups.length}</div><div class="stat-label">Groups</div></div>
+      <div class="stat-item"><div class="stat-value">${totalM}</div><div class="stat-label">Boys</div></div>
+      <div class="stat-item"><div class="stat-value">${totalF}</div><div class="stat-label">Girls</div></div>
+      <div class="stat-item"><div class="stat-value">${students.length}</div><div class="stat-label">Total</div></div>
+    `;
+            const noteEl = document.getElementById('groupNote');
+            if (note) { noteEl.textContent = note; noteEl.style.display = 'block'; }
+            else noteEl.style.display = 'none';
+
+            document.getElementById('groupsContainer').innerHTML = groups.map(g => `
+      <div class="group-card">
+        <div class="group-card-head">
+          <span class="group-num">Group ${g.number}</span>
+          <span class="group-meta">${g.size} members &bull; ${g.males}M ${g.females}F</span>
+        </div>
+        <div class="group-card-body">
+          <ul>${g.members.map(m => `<li>${m}</li>`).join('')}</ul>
+        </div>
+      </div>
+    `).join('');
+        }
+
+        // Template download
+        document.getElementById('downloadTemplate').onclick = () => {
+            const csv = 'StudentID,Surname,FirstName,Sex\n001,Asante,Kofi,M\n002,Mensah,Abena,F\n003,Boateng,Kwame,M\n';
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+            a.download = 'class_list_template.csv';
+            a.click();
+            showSuccess('Template downloaded');
+        };
+
+        // Export CSV
+        document.getElementById('exportCSV').onclick = () => {
+            const cls = document.getElementById('classInput').value || 'Class';
+            const sub = document.getElementById('subjectInput').value || 'Subject';
+            let csv = `Class,${cls}\nSubject,${sub}\n\nGroup,Name,Sex\n`;
+            document.querySelectorAll('.group-card').forEach(card => {
+                const gn = card.querySelector('.group-num').textContent.replace('Group ', '');
+                card.querySelectorAll('.group-card-body li').forEach(li => {
+                    const name = li.textContent.trim();
+                    const s = students.find(x => x.name === name);
+                    csv += `${gn},"${name}",${s?.sex || ''}\n`;
+                });
+            });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+            a.download = `${cls.replace(/\s+/g, '_')}_Groups.csv`;
+            a.click();
+            showSuccess('CSV exported');
+        };
+
+        // Export PDF
+        document.getElementById('exportPDF').onclick = () => {
+            const cards = document.querySelectorAll('.group-card');
+            if (!cards.length) return showError('Generate groups first');
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pw = pdf.internal.pageSize.getWidth();
+            const ph = pdf.internal.pageSize.getHeight();
+            const margin = 15;
+            const cols = 2;
+            const colW = (pw - margin * 2 - 8) / cols;
+
+            // Header
+            pdf.setFontSize(18);
+            pdf.setTextColor(0, 90, 160);
+            pdf.setFont(undefined, 'bold');
+            pdf.text('EduTools \u2014 Group Generator', pw / 2, 18, { align: 'center' });
+
+            const cls = document.getElementById('classInput').value || '';
+            const sub = document.getElementById('subjectInput').value || '';
+            const top = document.getElementById('topicInput').value || '';
+            const subtitle = [cls, sub, top].filter(Boolean).join(' | ');
+
+            pdf.setFontSize(11);
+            pdf.setTextColor(30, 30, 30);
+            pdf.setFont(undefined, 'normal');
+            if (subtitle) pdf.text(subtitle, pw / 2, 26, { align: 'center' });
+
+            pdf.setFontSize(9);
+            pdf.setTextColor(80, 80, 80);
+            pdf.text(new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }), pw / 2, 32, { align: 'center' });
+
+            // Separator line
+            pdf.setDrawColor(0, 90, 160);
+            pdf.setLineWidth(0.5);
+            pdf.line(margin, 36, pw - margin, 36);
+
+            let y = 42;
+            let col = 0;
+
+            cards.forEach(card => {
+                const title = card.querySelector('.group-num').textContent.trim();
+                const meta = card.querySelector('.group-meta').textContent.trim();
+                const members = [...card.querySelectorAll('.group-card-body li')].map(li => li.textContent.trim());
+                const boxH = 10 + members.length * 6 + 6;
+                const x = margin + col * (colW + 8);
+
+                // New page if needed
+                if (y + boxH > ph - margin) {
+                    pdf.addPage();
+                    y = margin;
+                }
+
+                // Card header fill
+                pdf.setFillColor(0, 90, 160);
+                pdf.rect(x, y, colW, 9, 'F');
+
+                // Card border
+                pdf.setDrawColor(0, 90, 160);
+                pdf.setLineWidth(0.3);
+                pdf.rect(x, y, colW, boxH);
+
+                // Group title (white on blue header)
+                pdf.setFontSize(10);
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFont(undefined, 'bold');
+                pdf.text(title, x + 3, y + 6);
+
+                // Meta (white on blue header)
+                pdf.setFontSize(8);
+                pdf.setFont(undefined, 'normal');
+                pdf.text(meta, x + colW - 3, y + 6, { align: 'right' });
+
+                // Members (dark text on white body)
+                pdf.setFontSize(9);
+                pdf.setTextColor(20, 20, 20);
+                members.forEach((m, mi) => {
+                    pdf.text('\u2022 ' + m, x + 4, y + 14 + mi * 6);
+                });
+
+                col++;
+                if (col >= cols) {
+                    col = 0;
+                    y += boxH + 6;
+                }
+            });
+
+            pdf.save(`${(cls || 'Class').replace(/\s+/g, '_')}_Groups.pdf`);
+            showSuccess('PDF exported');
+        };
+
+        // Reset
+        document.getElementById('resetBtn').onclick = () => {
+            students = [];
+            fileInput.value = '';
+            document.getElementById('fileName').style.display = 'none';
+            document.getElementById('membersContainer').classList.add('hidden');
+            document.getElementById('configSection').classList.add('hidden');
+            document.getElementById('resultsSection').classList.add('hidden');
+            document.getElementById('membersList').innerHTML = '';
+            document.getElementById('groupsContainer').innerHTML = '';
+            showSuccess('Reset complete');
+        };
+    </script>
+</body>
+
+</html>

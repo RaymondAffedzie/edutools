@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Picker — EduTools</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <style>
+        .content-panel {
+            display: grid;
+            grid-template-columns: 35% 65%;
+            gap: 24px;
+            align-items: start;
+            padding: 24px 40px;
+        }
+
+        .left-column,
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .panel-card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .panel-card h3 {
+            font-family: var(--font-head);
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-card h3 .material-icons-round {
+            font-size: 18px;
+            color: var(--purple);
+        }
+
+        /* Pick Stage */
+        .pick-stage {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 24px;
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            min-height: 320px;
+            margin-bottom: 20px;
+        }
+
+        .pick-stage::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at center, rgba(167, 139, 250, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .pick-ripple {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            border: 1px solid rgba(167, 139, 250, 0.15);
+            animation: ripple-out 3s ease-out infinite;
+            pointer-events: none;
+        }
+
+        .pick-ripple:nth-child(2) {
+            animation-delay: 1s;
+        }
+
+        .pick-ripple:nth-child(3) {
+            animation-delay: 2s;
+        }
+
+        @keyframes ripple-out {
+            0% {
+                transform: scale(0.4);
+                opacity: 0.6;
+            }
+
+            100% {
+                transform: scale(1.6);
+                opacity: 0;
+            }
+        }
+
+        .pick-avatar {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(167, 139, 250, 0.3), rgba(0, 212, 255, 0.2));
+            border: 2px solid rgba(167, 139, 250, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 0 40px rgba(167, 139, 250, 0.25);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .pick-avatar .material-icons-round {
+            font-size: 40px;
+            color: var(--purple);
+        }
+
+        .pick-avatar.has-pick {
+            background: linear-gradient(135deg, rgba(167, 139, 250, 0.5), rgba(0, 212, 255, 0.3));
+            border-color: var(--purple);
+            box-shadow: 0 0 60px rgba(167, 139, 250, 0.5);
+            transform: scale(1.08);
+        }
+
+        .pick-name {
+            font-family: var(--font-head);
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text);
+            margin-bottom: 6px;
+            position: relative;
+            z-index: 1;
+            min-height: 38px;
+        }
+
+        .pick-sub {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 24px;
+            position: relative;
+            z-index: 1;
+            min-height: 20px;
+        }
+
+        .pick-btn {
+            position: relative;
+            z-index: 1;
+            padding: 14px 40px;
+            font-size: 16px;
+            border-radius: 50px;
+            background: linear-gradient(135deg, var(--purple), rgba(167, 139, 250, 0.7));
+            color: white;
+            border: none;
+            font-family: var(--font-body);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 24px rgba(167, 139, 250, 0.35);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pick-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(167, 139, 250, 0.5);
+        }
+
+        .pick-btn:active {
+            transform: scale(0.96);
+        }
+
+        .pick-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .pick-btn .material-icons-round {
+            font-size: 20px;
+        }
+
+        /* Pool display */
+        .pool-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .pool-chip {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            background: var(--glass-md);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .pool-chip.picked {
+            opacity: 0.3;
+            text-decoration: line-through;
+        }
+
+        .pool-chip .sex-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .sex-dot.m {
+            background: var(--cyan);
+        }
+
+        .sex-dot.f {
+            background: var(--rose);
+        }
+
+        /* History */
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 14px;
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+        }
+
+        .history-item .pick-num {
+            font-family: var(--font-head);
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--purple);
+            min-width: 28px;
+        }
+
+        /* Spinning animation for pick */
+        @keyframes name-spin {
+            0% {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .name-reveal {
+            animation: name-spin 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @media (max-width: 640px) {
+            .content-panel {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- <div class="bg-canvas" aria-hidden="true">
+        <div class="bg-orb" style="background:radial-gradient(circle,#a78bfa,transparent)"></div>
+        <div class="bg-orb" style="background:radial-gradient(circle,#00d4ff,transparent)"></div>
+        <div class="bg-orb" style="background:radial-gradient(circle,#00bfa5,transparent)"></div>
+    </div> -->
+
+    <!-- Island Navbar -->
+    <nav class="island-nav" aria-label="Main navigation">
+        <div class="nav-logo">
+            <span class="material-icons-round">school</span>
+        </div>
+        <div class="nav-divider"></div>
+        <a href="/" class="nav-item" data-tooltip="Home">
+            <span class="material-icons-round">home</span>
+        </a>
+        <a href="/group-generator" class="nav-item" data-tooltip="Group Generator">
+            <span class="material-icons-round">group_work</span>
+        </a>
+        <a href="/student-picker" class="nav-item active" data-tooltip="Student Picker">
+            <span class="material-icons-round">how_to_reg</span>
+        </a>
+        <a href="/assessment-generator" class="nav-item" data-tooltip="Assessment Generator">
+            <span class="material-icons-round">assignment</span>
+        </a>
+        <a href="/pdf-extractor" class="nav-item" data-tooltip="PDF Extractor">
+            <span class="material-icons-round">picture_as_pdf</span>
+        </a>
+        <a href="/peace-sheet" class="nav-item" data-tooltip="PEACE Sheet">
+            <span class="material-icons-round">table_chart</span>
+        </a>
+    </nav>
+
+    <div class="alert alert-error" id="errorAlert">
+        <span class="material-icons-round">error_outline</span>
+        <span id="errorMsg">Error</span>
+    </div>
+    <div class="alert alert-success" id="successAlert">
+        <span class="material-icons-round">check_circle</span>
+        <span id="successMsg">Done</span>
+    </div>
+
+    <div class="loading-overlay" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="page-wrap">
+
+        <header class="page-header">
+            <div class="breadcrumb">
+                <a href="/"><span class="material-icons-round">home</span> Home</a>
+                <span class="material-icons-round">chevron_right</span>
+                <span>Student Picker</span>
+            </div>
+            <h1>Student Picker</h1>
+            <p>Randomly pick students for participation. Track who has been called and manage your pool across rounds.
+            </p>
+        </header>
+
+        <div class="content-panel">
+
+            <div class="left-column">
+
+                <!-- Upload -->
+                <div class="panel-card">
+                    <h3><span class="material-icons-round">upload_file</span> Load Class List</h3>
+                    <div class="upload-zone" id="uploadBox">
+                        <span class="material-icons-round upload-icon" style="color:var(--purple)">water_drop</span>
+                        <h3>Drop CSV here to load students</h3>
+                        <p>Format: ID, Surname, First Name, Sex (M/F)</p>
+                        <div class="file-name-display" id="fileName"></div>
+                    </div>
+                    <input type="file" id="fileInput" accept=".csv" style="display:none" />
+                    <div class="flex gap-3 mt-3">
+                        <button class="btn btn-glass btn-sm" onclick="document.getElementById('fileInput').click()">
+                            <span class="material-icons-round">folder_open</span> Browse
+                        </button>
+                    </div>
+                    <div id="uploadStats" class="hidden mt-3">
+                        <div class="stat-row">
+                            <div class="stat-item">
+                                <div class="stat-value" id="totalCount">0</div>
+                                <div class="stat-label">Total</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="poolCount" style="color:var(--purple)">0</div>
+                                <div class="stat-label">In Pool</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="pickedCount" style="color:var(--rose)">0</div>
+                                <div class="stat-label">Picked</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="right-column">
+                <!-- Picker (hidden until loaded) -->
+                <div id="pickerSection" class="hidden">
+
+                    <!-- Main pick area -->
+                    <div class="pick-stage">
+                        <div class="pick-ripple"></div>
+                        <div class="pick-ripple"></div>
+                        <div class="pick-ripple"></div>
+
+                        <div class="pick-avatar" id="pickAvatar">
+                            <span class="material-icons-round">person</span>
+                        </div>
+
+                        <div class="pick-name" id="pickName">Ready to pick</div>
+                        <div class="pick-sub" id="pickSub">Press the button to randomly select a student</div>
+
+                        <button class="pick-btn" id="pickBtn">
+                            <span class="material-icons-round">casino</span> Pick a Student
+                        </button>
+                    </div>
+
+                    <!-- Controls -->
+                    <div class="flex gap-3 mb-4" style="flex-wrap:wrap">
+                        <label class="checkbox-wrap">
+                            <input type="checkbox" id="removeAfterPick" checked />
+                            <span>Remove from pool after pick</span>
+                        </label>
+                        <button class="btn btn-glass btn-sm" id="resetPoolBtn" style="margin-left:auto">
+                            <span class="material-icons-round">refresh</span> Reset Pool
+                        </button>
+                    </div>
+
+                    <!-- Pool display -->
+                    <div class="panel-card">
+                        <h3><span class="material-icons-round">people</span> Student Pool</h3>
+                        <div class="pool-grid" id="poolGrid"></div>
+                    </div>
+
+                    <!-- History -->
+                    <div class="panel-card" id="historyPanel" style="display:none">
+                        <h3><span class="material-icons-round">history</span> Pick History</h3>
+                        <div class="history-list" id="historyList"></div>
+                        <div class="mt-3">
+                            <button class="btn btn-danger btn-sm" id="clearHistoryBtn">
+                                <span class="material-icons-round">delete</span> Clear History
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let students = [];
+        let pool = [];
+        let pickHistory = [];
+        let pickCount = 0;
+
+        const loading = document.getElementById('loading');
+        const fileInput = document.getElementById('fileInput');
+
+        function showError(msg) {
+            document.getElementById('errorMsg').textContent = msg;
+            const a = document.getElementById('errorAlert');
+            a.classList.add('show');
+            setTimeout(() => a.classList.remove('show'), 5000);
+        }
+
+        function showSuccess(msg) {
+            document.getElementById('successMsg').textContent = msg;
+            const a = document.getElementById('successAlert');
+            a.classList.add('show');
+            setTimeout(() => a.classList.remove('show'), 3000);
+        }
+
+        // Upload handling
+        const uploadBox = document.getElementById('uploadBox');
+        ['dragover', 'dragenter'].forEach(e => uploadBox.addEventListener(e, ev => { ev.preventDefault(); uploadBox.classList.add('dragover'); }));
+        ['dragleave', 'dragend', 'drop'].forEach(e => uploadBox.addEventListener(e, ev => { ev.preventDefault(); uploadBox.classList.remove('dragover'); }));
+        uploadBox.addEventListener('drop', e => { if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+        uploadBox.addEventListener('click', () => fileInput.click());
+        fileInput.onchange = e => { if (e.target.files[0]) handleFile(e.target.files[0]); };
+
+        function handleFile(file) {
+            if (!file.name.toLowerCase().endsWith('.csv')) return showError('Please upload a CSV file');
+            const fd = new FormData();
+            fd.append('file', file);
+            loading.classList.add('show');
+            fetch('/upload', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(data => {
+                    loading.classList.remove('show');
+                    if (data.error) return showError(data.error);
+                    students = data.students;
+                    pool = [...students];
+                    pickHistory = [];
+                    pickCount = 0;
+                    document.getElementById('fileName').textContent = file.name;
+                    document.getElementById('fileName').style.display = 'block';
+                    document.getElementById('uploadStats').classList.remove('hidden');
+                    document.getElementById('pickerSection').classList.remove('hidden');
+                    updateStats();
+                    renderPool();
+                    showSuccess(data.count + ' students loaded');
+                })
+                .catch(() => { loading.classList.remove('show'); showError('Upload failed'); });
+        }
+
+        function updateStats() {
+            document.getElementById('totalCount').textContent = students.length;
+            document.getElementById('poolCount').textContent = pool.length;
+            document.getElementById('pickedCount').textContent = pickHistory.length;
+            document.getElementById('pickBtn').disabled = pool.length === 0;
+        }
+
+        function renderPool() {
+            const pickedNames = pickHistory.map(p => p.name);
+            document.getElementById('poolGrid').innerHTML = students.map(s => `
+      <div class="pool-chip ${pickedNames.includes(s.name) && document.getElementById('removeAfterPick').checked ? 'picked' : ''}">
+        <div class="sex-dot ${s.sex.toLowerCase()}"></div>
+        <span>${s.name}</span>
+      </div>
+    `).join('');
+        }
+
+        // Pick student
+        document.getElementById('pickBtn').onclick = () => {
+            if (pool.length === 0) {
+                showError('Pool is empty. Reset to start again.');
+                return;
+            }
+
+            const btn = document.getElementById('pickBtn');
+            btn.disabled = true;
+
+            // Rapid shuffle animation
+            let count = 0;
+            const max = 12;
+            const interval = setInterval(() => {
+                const temp = pool[Math.floor(Math.random() * pool.length)];
+                document.getElementById('pickName').textContent = temp.name;
+                count++;
+                if (count >= max) {
+                    clearInterval(interval);
+                    // Final pick
+                    const idx = Math.floor(Math.random() * pool.length);
+                    const picked = pool[idx];
+                    pickCount++;
+                    pickHistory.unshift({ ...picked, pickNum: pickCount });
+
+                    if (document.getElementById('removeAfterPick').checked) {
+                        pool.splice(idx, 1);
+                    }
+
+                    const nameEl = document.getElementById('pickName');
+                    nameEl.textContent = picked.name;
+                    nameEl.className = 'pick-name name-reveal';
+
+                    document.getElementById('pickSub').textContent = picked.sex === 'M' ? 'Boy — selected' : 'Girl — selected';
+                    document.getElementById('pickAvatar').classList.add('has-pick');
+
+                    // Update history
+                    const historyPanel = document.getElementById('historyPanel');
+                    historyPanel.style.display = 'block';
+                    document.getElementById('historyList').innerHTML = pickHistory.map(p => `
+          <div class="history-item">
+            <span class="pick-num">#${p.pickNum}</span>
+            <div class="sex-dot ${p.sex.toLowerCase()}"></div>
+            <span>${p.name}</span>
+            <span class="badge badge-muted" style="margin-left:auto">${p.sex === 'M' ? 'Boy' : 'Girl'}</span>
+          </div>
+        `).join('');
+
+                    updateStats();
+                    renderPool();
+
+                    setTimeout(() => { btn.disabled = pool.length === 0; }, 600);
+                }
+            }, 80);
+        };
+
+        // Reset pool
+        document.getElementById('resetPoolBtn').onclick = () => {
+            pool = [...students];
+            document.getElementById('pickAvatar').classList.remove('has-pick');
+            document.getElementById('pickName').textContent = 'Ready to pick';
+            document.getElementById('pickName').className = 'pick-name';
+            document.getElementById('pickSub').textContent = 'Pool has been reset — all students are back in';
+            updateStats();
+            renderPool();
+            showSuccess('Pool reset');
+        };
+
+        // Clear history
+        document.getElementById('clearHistoryBtn').onclick = () => {
+            pickHistory = [];
+            pickCount = 0;
+            document.getElementById('historyList').innerHTML = '';
+            document.getElementById('historyPanel').style.display = 'none';
+            updateStats();
+            showSuccess('History cleared');
+        };
+    </script>
+</body>
+
+</html>

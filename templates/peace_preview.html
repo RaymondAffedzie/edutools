@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Preview — PEACE Sheet — EduTools</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <style>
+        /* ── PEACE Sheet preview page ── */
+        .ps-wrap {
+            max-width: 99vw;
+            padding: 40px 28px 80px;
+        }
+
+        .ps-alert-error {
+            padding: 0.85rem 1rem;
+            background: rgba(220, 38, 38, 0.12);
+            color: #fca5a5;
+            border-radius: var(--radius-sm);
+            margin-bottom: 1.25rem;
+            border-left: 4px solid #dc2626;
+        }
+
+        /* Info strip */
+        .ps-info-strip {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.25rem;
+            padding: 1rem 1.25rem;
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            border-radius: var(--radius-md);
+            margin-bottom: 1.5rem;
+        }
+        .ps-info-item { font-size: 0.88rem; color: var(--text-muted); }
+        .ps-info-item span { font-weight: 700; color: #34d399; }
+
+        /* Table */
+        .table-note {
+            font-size: 0.82rem;
+            color: var(--text-dim);
+            margin-bottom: 0.75rem;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 60vh;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+        }
+        table {
+            border-collapse: collapse;
+            font-size: 0.78rem;
+            white-space: nowrap;
+        }
+        tr.row-meta1 td {
+            white-space: normal;
+            max-width: 140px;
+            word-break: break-word;
+        }
+        tr.row-meta0 td:nth-child(10) {
+            white-space: normal;
+            max-width: 200px;
+            word-break: break-word;
+        }
+        th, td {
+            padding: 0.45rem 0.65rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            border-right: 1px solid rgba(255,255,255,0.06);
+            text-align: left;
+        }
+        th {
+            background: #1a73e8;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            font-weight: 600;
+        }
+
+        /* Freeze first 4 columns — opaque so content never bleeds through */
+        td:nth-child(1), th:nth-child(1) { position: sticky; left: 0;     z-index: 5; min-width: 42px;  background: #0e1e35 !important; }
+        td:nth-child(2), th:nth-child(2) { position: sticky; left: 42px;  z-index: 5; min-width: 120px; background: #0e1e35 !important; }
+        td:nth-child(3), th:nth-child(3) { position: sticky; left: 162px; z-index: 5; min-width: 130px; background: #0e1e35 !important; }
+        td:nth-child(4), th:nth-child(4) { position: sticky; left: 292px; z-index: 5; min-width: 180px; background: #0e1e35 !important; border-right: 2px solid rgba(255,255,255,0.15); }
+        th:nth-child(1), th:nth-child(2), th:nth-child(3), th:nth-child(4) { background: #1557b0 !important; z-index: 15; }
+
+        /* Row colours (subdued for dark theme) */
+        tr.row-meta0   td { background: rgba(254, 249, 195, 0.08); color: #fde68a; font-weight: 600; }
+        tr.row-meta1   td { background: rgba(239, 246, 255, 0.06); color: #93c5fd; }
+        tr.row-meta2   td { background: rgba(240, 253, 244, 0.06); color: #86efac; }
+        tr.row-meta3   td { background: rgba(253, 244, 255, 0.06); color: #d8b4fe; }
+        tr.row-header  td { background: #1a73e8; color: white; font-weight: 600; }
+        tr.row-student td { background: rgba(255,255,255,0.02); color: var(--text); }
+        tr.row-student:nth-child(even) td { background: rgba(255,255,255,0.04); }
+
+        /* Stepper */
+        .stepper-wrap {
+            display: flex; align-items: center;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 14px 24px;
+            margin-bottom: 28px;
+        }
+        .stepper { display: flex; align-items: center; width: 100%; }
+        .step { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+        .step-bubble {
+            width: 34px; height: 34px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--font-head); font-size: 13px; font-weight: 700;
+            flex-shrink: 0; border: 2px solid var(--border);
+            color: var(--text-dim); background: var(--glass); transition: all 0.2s;
+        }
+        .step.active .step-bubble {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-color: transparent; color: white;
+            box-shadow: 0 0 14px rgba(16, 185, 129, 0.45);
+        }
+        .step.done .step-bubble {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: #10b981; color: #34d399;
+        }
+        .step-text { display: flex; flex-direction: column; gap: 1px; }
+        .step-num { font-size: 10px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; line-height: 1; }
+        .step.done .step-num, .step.active .step-num { color: #34d399; }
+        .step-label { font-size: 13px; font-weight: 600; color: var(--text-dim); white-space: nowrap; line-height: 1.2; }
+        .step.active .step-label { color: var(--text); }
+        .step.done .step-label { color: var(--text-muted); }
+        .step-connector { flex: 1; height: 2px; background: var(--border); margin: 0 16px; border-radius: 2px; min-width: 24px; }
+        .step-connector.done { background: linear-gradient(90deg, #10b981, rgba(16,185,129,0.4)); }
+
+        .col-total { background: rgba(254, 243, 199, 0.08) !important; color: #fde68a !important; }
+        th.col-total { background: #b45309 !important; color: white !important; }
+
+        /* Actions */
+        .ps-actions {
+            margin-top: 1.75rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .filename-display {
+            flex: 1;
+            font-family: monospace;
+            font-size: 0.88rem;
+            background: var(--glass-md);
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .ps-btn {
+            display: inline-block;
+            padding: 0.8rem 2rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            font-family: var(--font-body);
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        .ps-btn-secondary {
+            background: var(--glass-md);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+        .ps-btn-secondary:hover { color: var(--text); border-color: var(--border-hi); }
+        .ps-btn-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            font-size: 1rem;
+            padding: 0.9rem 2.5rem;
+        }
+        .ps-btn-success:hover { background: linear-gradient(135deg, #059669, #047857); }
+        .ps-btn-success:disabled { opacity: 0.45; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+    <!-- Island Navbar -->
+    <nav class="island-nav" aria-label="Main navigation">
+        <div class="nav-logo">
+            <span class="material-icons-round">school</span>
+        </div>
+        <div class="nav-divider"></div>
+        <a href="/" class="nav-item" data-tooltip="Home">
+            <span class="material-icons-round">home</span>
+        </a>
+        <a href="/group-generator" class="nav-item" data-tooltip="Group Generator">
+            <span class="material-icons-round">group_work</span>
+        </a>
+        <a href="/student-picker" class="nav-item" data-tooltip="Student Picker">
+            <span class="material-icons-round">how_to_reg</span>
+        </a>
+        <a href="/assessment-generator" class="nav-item" data-tooltip="Assessment Generator">
+            <span class="material-icons-round">assignment</span>
+        </a>
+        <a href="/pdf-extractor" class="nav-item" data-tooltip="PDF Extractor">
+            <span class="material-icons-round">picture_as_pdf</span>
+        </a>
+        <a href="/peace-sheet" class="nav-item active" data-tooltip="PEACE Sheet">
+            <span class="material-icons-round">table_chart</span>
+        </a>
+    </nav>
+
+    <div class="page-wrap">
+        <div class="ps-wrap">
+
+            <!-- Page Header -->
+            <div class="page-header">
+                <div class="breadcrumb">
+                    <a href="/"><span class="material-icons-round">home</span> Home</a>
+                    <span class="material-icons-round">chevron_right</span>
+                    <a href="{{ url_for('peace_upload') }}">PEACE Sheet</a>
+                    <span class="material-icons-round">chevron_right</span>
+                    <span>Preview</span>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 12px; flex-wrap: wrap; gap: 12px;">
+                    <h1 style="font-family: var(--font-head); font-size: clamp(24px, 3vw, 36px); font-weight: 800; letter-spacing: -0.03em;">PEACE Sheet Preview</h1>
+                    <span style="background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); padding: 0.35rem 0.9rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">
+                        {{ student_count }} student{{ 's' if student_count != 1 else '' }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Stepper -->
+            <div class="stepper-wrap">
+                <div class="stepper">
+                    <div class="step done">
+                        <div class="step-bubble"><span class="material-icons-round" style="font-size:16px;">check</span></div>
+                        <div class="step-text">
+                            <span class="step-num">Step 1</span>
+                            <span class="step-label">Upload CSV</span>
+                        </div>
+                    </div>
+                    <div class="step-connector done"></div>
+                    <div class="step done">
+                        <div class="step-bubble"><span class="material-icons-round" style="font-size:16px;">check</span></div>
+                        <div class="step-text">
+                            <span class="step-num">Step 2</span>
+                            <span class="step-label">Map Assessments</span>
+                        </div>
+                    </div>
+                    <div class="step-connector done"></div>
+                    <div class="step active">
+                        <div class="step-bubble">3</div>
+                        <div class="step-text">
+                            <span class="step-num">Step 3</span>
+                            <span class="step-label">Preview &amp; Download</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info strip -->
+            <div class="ps-info-strip">
+                <div class="ps-info-item">Class: <span>{{ meta.class_name }}</span></div>
+                <div class="ps-info-item">Year: <span>{{ meta.academic_year }}</span></div>
+                <div class="ps-info-item">Term: <span>{{ meta.term }}</span></div>
+                <div class="ps-info-item">Subject: <span>{{ meta.subject }}</span></div>
+                <div class="ps-info-item">Class Size: <span>{{ meta.class_size }}</span></div>
+                <div class="ps-info-item">Mapped: <span>{{ mapping_dict|length }}</span></div>
+            </div>
+
+            <p class="table-note">
+                Rows shown: metadata (yellow) · Assignment Tags (blue) · Week (green) · Max Pts (purple) · Column headers · {{ student_count }} students.
+            </p>
+
+            <!-- Preview table -->
+            <div class="table-wrapper">
+                <table>
+                    {% for row in rows %}
+                    {% set loop_idx = loop.index0 %}
+                    {% if loop_idx == 0 %}
+                    <tr class="row-meta0">
+                    {% elif loop_idx == 1 %}
+                    <tr class="row-meta1">
+                    {% elif loop_idx == 2 %}
+                    <tr class="row-meta2">
+                    {% elif loop_idx == 3 %}
+                    <tr class="row-meta3">
+                    {% elif loop_idx == 4 %}
+                    <tr class="row-header">
+                    {% else %}
+                    <tr class="row-student">
+                    {% endif %}
+                        {% for cell in row %}
+                        {% set col_header = columns[loop.index0] if loop.index0 < columns|length else '' %}
+                        {% if 'Total' in col_header %}
+                            {% if loop_idx == 4 %}
+                            <th class="col-total">{{ cell if cell is not none else '' }}</th>
+                            {% else %}
+                            <td class="col-total">{{ cell if cell is not none else '' }}</td>
+                            {% endif %}
+                        {% else %}
+                            {% if loop_idx == 4 %}
+                            <th>{{ cell if cell is not none else '' }}</th>
+                            {% else %}
+                            <td>{{ cell if cell is not none else '' }}</td>
+                            {% endif %}
+                        {% endif %}
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+
+            <!-- Download form -->
+            <form method="POST" action="{{ url_for('peace_download') }}" id="download-form">
+                <div class="ps-actions">
+                    <a href="{{ url_for('peace_mapping') }}" class="ps-btn ps-btn-secondary">← Edit Mapping</a>
+                    <div class="filename-display" title="{{ filename }}">{{ filename }}</div>
+                    <button type="submit" class="ps-btn ps-btn-success" id="dl-btn">
+                        Download Final CSV
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+<script>
+    document.getElementById('download-form').addEventListener('submit', function() {
+        const btn = document.getElementById('dl-btn');
+        btn.textContent = 'Generating…';
+        btn.disabled = true;
+        setTimeout(() => { btn.textContent = 'Download Final CSV'; btn.disabled = false; }, 4000);
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EduTools — iRBbA Devs</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <style>
+        /* ── Home-specific ── */
+        .hero {
+            padding: 40px 40px 20px;
+            max-width: 90vw;
+        }
+
+        .hero .eyebrow {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            color: var(--cyan);
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .hero .eyebrow::after {
+            content: '';
+            flex: 1;
+            max-width: 40px;
+            height: 1px;
+            background: var(--cyan);
+            opacity: 0.5;
+        }
+
+        .hero .eyebrow .brand {
+            font-family: var(--font-logo);
+        }
+
+        .hero .eyebrow .brand-product {
+            font-family: var(--font-logo-alt);
+            color: var(--text-muted);
+            letter-spacing: 0.02em;
+        }
+
+        .hero h1 {
+            font-family: var(--font-head);
+            font-size: clamp(36px, 6vw, 64px);
+            font-weight: 800;
+            line-height: 1.05;
+            letter-spacing: -0.03em;
+            margin-bottom: 20px;
+        }
+
+        .hero h1 span {
+            background: linear-gradient(135deg, var(--cyan) 0%, var(--purple) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 17px;
+            color: var(--text-muted);
+            line-height: 1.7;
+            max-width: 80vw;
+        }
+
+        /* ── Modules Grid ── */
+        .modules-section {
+            padding: 20px 40px 20px;
+        }
+
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            max-width: 1000px;
+        }
+
+        /* Module card */
+        .module-card {
+            position: relative;
+            background: var(--glass);
+            backdrop-filter: var(--blur-sm);
+            -webkit-backdrop-filter: var(--blur-sm);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: 32px;
+            overflow: hidden;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            transition: all 0.35s cubic-bezier(0.34, 1.3, 0.64, 1);
+            transform-origin: center bottom;
+        }
+
+        .module-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            opacity: 0;
+            transition: opacity 0.35s ease;
+        }
+
+        .module-card.card-groups::before {
+            background: radial-gradient(ellipse at top left, rgba(0, 212, 255, 0.12), transparent 60%);
+        }
+
+        .module-card.card-picker::before {
+            background: radial-gradient(ellipse at top left, rgba(167, 139, 250, 0.12), transparent 60%);
+        }
+
+        .module-card.card-assessment::before {
+            background: radial-gradient(ellipse at top left, rgba(0, 191, 165, 0.12), transparent 60%);
+        }
+
+        .module-card:hover {
+            border-color: var(--border-hi);
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .module-card:hover::before {
+            opacity: 1;
+        }
+
+        /* Illustration area */
+        .card-illus {
+            height: 130px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        .card-illus svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Card text */
+        .card-tag {
+            margin-bottom: 10px;
+        }
+
+        .module-card h2 {
+            font-family: var(--font-head);
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+
+        .module-card p {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-arrow {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .card-groups .card-arrow {
+            background: var(--cyan-dim);
+            color: var(--cyan);
+        }
+
+        .card-picker .card-arrow {
+            background: rgba(167, 139, 250, 0.15);
+            color: var(--purple);
+        }
+
+        .card-assessment .card-arrow {
+            background: rgba(0, 191, 165, 0.15);
+            color: var(--teal);
+        }
+
+        .module-card:hover .card-arrow {
+            transform: translateX(4px);
+        }
+
+        /* Water splash SVG drop pools */
+        .drop-pool {
+            position: absolute;
+            bottom: -12px;
+            border-radius: 50%;
+            filter: blur(1px);
+            opacity: 0.35;
+        }
+
+        /* ── Info strip ── */
+        .info-strip {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            padding: 24px 40px;
+            background: var(--glass);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .info-strip-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .info-strip-item .material-icons-round {
+            font-size: 18px;
+            color: var(--cyan);
+        }
+
+        /* Card entrance animation */
+        .module-card {
+            opacity: 0;
+            animation: card-in 0.6s ease forwards;
+        }
+
+        .module-card:nth-child(1) {
+            animation-delay: 0.2s;
+        }
+
+        .module-card:nth-child(2) {
+            animation-delay: 0.5s;
+        }
+
+        .module-card:nth-child(3) {
+            animation-delay: 0.9s;
+        }
+
+        .module-card:nth-child(4) {
+            animation-delay: 1.2s;
+        }
+
+        .module-card:nth-child(5) {
+            animation-delay: 1.5s;
+        }
+
+        .module-card.card-peace::before {
+            background: radial-gradient(ellipse at top left, rgba(16, 185, 129, 0.12), transparent 60%);
+        }
+
+        .card-peace .card-arrow {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+        }
+            background: radial-gradient(ellipse at top left, rgba(251, 191, 36, 0.12), transparent 60%);
+        }
+
+        .card-pdf .card-arrow {
+            background: rgba(251, 191, 36, 0.15);
+            color: #fbbf24;
+        }
+
+        @keyframes card-in {
+            from {
+                opacity: 0;
+                transform: translateY(24px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero,
+        .info-strip {
+            opacity: 0;
+            animation: fade-up 0.5s ease forwards;
+        }
+
+        .info-strip {
+            animation-delay: 0.05s;
+        }
+
+        @keyframes fade-up {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .hero {
+                padding: 40px 20px 24px;
+            }
+
+            .modules-section {
+                padding: 16px 16px 40px;
+            }
+
+            .info-strip {
+                padding: 16px 20px;
+                gap: 16px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Background -->
+    <!-- <div class="bg-canvas" aria-hidden="true">
+        <div class="bg-orb"></div>
+        <div class="bg-orb"></div>
+        <div class="bg-orb"></div>
+    </div> -->
+
+    <!-- Island Navbar -->
+    <nav class="island-nav" aria-label="Main navigation">
+        <div class="nav-logo">
+            <span class="material-icons-round">school</span>
+        </div>
+        <div class="nav-divider"></div>
+        <a href="/" class="nav-item active" data-tooltip="Home">
+            <span class="material-icons-round">home</span>
+        </a>
+        <a href="/group-generator" class="nav-item" data-tooltip="Group Generator">
+            <span class="material-icons-round">group_work</span>
+        </a>
+        <a href="/student-picker" class="nav-item" data-tooltip="Student Picker">
+            <span class="material-icons-round">how_to_reg</span>
+        </a>
+        <a href="/assessment-generator" class="nav-item" data-tooltip="Assessment Generator">
+            <span class="material-icons-round">assignment</span>
+        </a>
+        <a href="/pdf-extractor" class="nav-item" data-tooltip="PDF Extractor">
+            <span class="material-icons-round">picture_as_pdf</span>
+        </a>
+        <a href="/peace-sheet" class="nav-item" data-tooltip="PEACE Sheet">
+            <span class="material-icons-round">table_chart</span>
+        </a>
+    </nav>
+
+    <!-- Page Content -->
+    <div class="page-wrap">
+
+        <!-- Hero -->
+        <section class="hero">
+            <div class="eyebrow">
+                <span class="brand">irbba Devs</span>
+                <span class="brand-product">EduTools</span>
+            </div>
+            <h1>Classroom <span>reimagined.</span></h1>
+            <p>A unified suite of intelligent tools built for modern educators — from student grouping to weekly
+                assessment generation.</p>
+        </section>
+
+        <!-- Info Strip -->
+        <div class="info-strip">
+            <div class="info-strip-item">
+                <span class="material-icons-round">diversity_3</span>
+                <span>5 Modules available</span>
+            </div>
+            <div class="info-strip-item">
+                <span class="material-icons-round">upload_file</span>
+                <span>CSV &amp; PDF workflows</span>
+            </div>
+            <div class="info-strip-item">
+                <span class="material-icons-round">devices</span>
+                <span>Works on any device</span>
+            </div>
+            <div class="info-strip-item">
+                <span class="material-icons-round">lock</span>
+                <span>All data stays local</span>
+            </div>
+        </div>
+
+        <!-- Modules -->
+        <section class="modules-section">
+            <div class="section-label" style="margin-bottom:20px;">Choose a module</div>
+
+            <div class="modules-grid">
+
+                <!-- Group Generator Card -->
+                <a href="/group-generator" class="module-card card-groups">
+                    <div class="card-illus">
+                        <svg viewBox="0 0 280 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Water pool base -->
+                            <ellipse cx="140" cy="118" rx="110" ry="10" fill="rgba(0,212,255,0.08)" />
+                            <!-- Main drop 1 -->
+                            <path
+                                d="M80 90 C80 62 60 45 60 28 C60 14 69 5 80 5 C91 5 100 14 100 28 C100 45 80 62 80 90Z"
+                                fill="rgba(0,212,255,0.18)" stroke="rgba(0,212,255,0.5)" stroke-width="1" />
+                            <!-- Main drop 2 -->
+                            <path
+                                d="M140 85 C140 60 122 44 122 30 C122 17 130 10 140 10 C150 10 158 17 158 30 C158 44 140 60 140 85Z"
+                                fill="rgba(0,212,255,0.13)" stroke="rgba(0,212,255,0.4)" stroke-width="1" />
+                            <!-- Main drop 3 -->
+                            <path
+                                d="M200 90 C200 62 180 45 180 28 C180 14 189 5 200 5 C211 5 220 14 220 28 C220 45 200 62 200 90Z"
+                                fill="rgba(0,212,255,0.18)" stroke="rgba(0,212,255,0.5)" stroke-width="1" />
+                            <!-- Splash rings -->
+                            <ellipse cx="80" cy="108" rx="28" ry="5" stroke="rgba(0,212,255,0.3)" stroke-width="1"
+                                fill="none" />
+                            <ellipse cx="80" cy="108" rx="16" ry="3" stroke="rgba(0,212,255,0.5)" stroke-width="1"
+                                fill="none" />
+                            <ellipse cx="140" cy="104" rx="28" ry="5" stroke="rgba(0,212,255,0.3)" stroke-width="1"
+                                fill="none" />
+                            <ellipse cx="200" cy="108" rx="28" ry="5" stroke="rgba(0,212,255,0.3)" stroke-width="1"
+                                fill="none" />
+                            <!-- Connecting arcs (groups) -->
+                            <path d="M100 55 Q120 40 122 55" stroke="rgba(0,212,255,0.25)" stroke-width="1.5"
+                                fill="none" stroke-dasharray="4 3" />
+                            <path d="M158 55 Q178 40 180 55" stroke="rgba(0,212,255,0.25)" stroke-width="1.5"
+                                fill="none" stroke-dasharray="4 3" />
+                            <!-- Highlight glints -->
+                            <ellipse cx="72" cy="22" rx="4" ry="7" fill="rgba(255,255,255,0.4)"
+                                transform="rotate(-20,72,22)" />
+                            <ellipse cx="132" cy="18" rx="4" ry="7" fill="rgba(255,255,255,0.4)"
+                                transform="rotate(-20,132,18)" />
+                            <ellipse cx="192" cy="22" rx="4" ry="7" fill="rgba(255,255,255,0.4)"
+                                transform="rotate(-20,192,22)" />
+                        </svg>
+                    </div>
+                    <div class="card-tag">
+                        <span class="badge badge-cyan">
+                            <span class="material-icons-round" style="font-size:11px">group_work</span>
+                            Classroom Tool
+                        </span>
+                    </div>
+                    <h2>Group Generator</h2>
+                    <p>Upload a class list and generate fair, gender-balanced student groups in seconds. Export to PDF
+                        or CSV.</p>
+                    <div class="card-footer">
+                        <div class="flex gap-2">
+                            <span class="badge badge-muted">CSV upload</span>
+                            <span class="badge badge-muted">PDF export</span>
+                        </div>
+                        <div class="card-arrow">
+                            <span class="material-icons-round">arrow_forward</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Student Picker Card -->
+                <a href="/student-picker" class="module-card card-picker">
+                    <div class="card-illus">
+                        <svg viewBox="0 0 280 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Ripple rings from center -->
+                            <ellipse cx="140" cy="90" rx="90" ry="18" stroke="rgba(167,139,250,0.12)" stroke-width="1"
+                                fill="rgba(167,139,250,0.04)" />
+                            <ellipse cx="140" cy="90" rx="65" ry="13" stroke="rgba(167,139,250,0.2)" stroke-width="1"
+                                fill="rgba(167,139,250,0.06)" />
+                            <ellipse cx="140" cy="90" rx="40" ry="8" stroke="rgba(167,139,250,0.35)" stroke-width="1.5"
+                                fill="rgba(167,139,250,0.08)" />
+                            <!-- Central drop -->
+                            <path
+                                d="M140 88 C140 55 118 36 118 16 C118 5 128 -2 140 -2 C152 -2 162 5 162 16 C162 36 140 55 140 88Z"
+                                fill="rgba(167,139,250,0.22)" stroke="rgba(167,139,250,0.6)" stroke-width="1.5" />
+                            <!-- Splash droplets around -->
+                            <path
+                                d="M92 68 C92 60 87 55 87 50 C87 46 89 44 92 44 C95 44 97 46 97 50 C97 55 92 60 92 68Z"
+                                fill="rgba(167,139,250,0.15)" stroke="rgba(167,139,250,0.4)" stroke-width="1" />
+                            <path
+                                d="M188 68 C188 60 183 55 183 50 C183 46 185 44 188 44 C191 44 193 46 193 50 C193 55 188 60 188 68Z"
+                                fill="rgba(167,139,250,0.15)" stroke="rgba(167,139,250,0.4)" stroke-width="1" />
+                            <path
+                                d="M114 100 C114 95 111 92 111 89 C111 87 112 86 114 86 C116 86 117 87 117 89 C117 92 114 95 114 100Z"
+                                fill="rgba(167,139,250,0.2)" stroke="rgba(167,139,250,0.5)" stroke-width="1" />
+                            <path
+                                d="M166 100 C166 95 163 92 163 89 C163 87 164 86 166 86 C168 86 169 87 169 89 C169 92 166 95 166 100Z"
+                                fill="rgba(167,139,250,0.2)" stroke="rgba(167,139,250,0.5)" stroke-width="1" />
+                            <!-- Star/pick indicator -->
+                            <circle cx="140" cy="34" r="6" fill="rgba(255,255,255,0.9)" />
+                            <circle cx="140" cy="34" r="3" fill="rgba(167,139,250,1)" />
+                            <!-- Highlight -->
+                            <ellipse cx="132" cy="12" rx="4" ry="6" fill="rgba(255,255,255,0.45)"
+                                transform="rotate(-20,132,12)" />
+                        </svg>
+                    </div>
+                    <div class="card-tag">
+                        <span class="badge badge-purple">
+                            <span class="material-icons-round" style="font-size:11px">how_to_reg</span>
+                            Classroom Tool
+                        </span>
+                    </div>
+                    <h2>Student Picker</h2>
+                    <p>Randomly select students from your class list for participation. Track who has been called and
+                        manage the pool.</p>
+                    <div class="card-footer">
+                        <div class="flex gap-2">
+                            <span class="badge badge-muted">Random pick</span>
+                            <span class="badge badge-muted">Pool tracking</span>
+                        </div>
+                        <div class="card-arrow">
+                            <span class="material-icons-round">arrow_forward</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Assessment Generator Card -->
+                <a href="/assessment-generator" class="module-card card-assessment">
+                    <div class="card-illus">
+                        <svg viewBox="0 0 280 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Background pool -->
+                            <ellipse cx="140" cy="118" rx="120" ry="10" fill="rgba(0,191,165,0.07)" />
+                            <!-- Document-shaped drops -->
+                            <rect x="72" y="10" width="50" height="78" rx="6" fill="rgba(0,191,165,0.12)"
+                                stroke="rgba(0,191,165,0.4)" stroke-width="1" />
+                            <rect x="158" y="10" width="50" height="78" rx="6" fill="rgba(0,191,165,0.12)"
+                                stroke="rgba(0,191,165,0.4)" stroke-width="1" />
+                            <!-- Lines on docs -->
+                            <line x1="82" y1="28" x2="112" y2="28" stroke="rgba(0,191,165,0.5)" stroke-width="1.5"
+                                stroke-linecap="round" />
+                            <line x1="82" y1="38" x2="112" y2="38" stroke="rgba(0,191,165,0.35)" stroke-width="1.5"
+                                stroke-linecap="round" />
+                            <line x1="82" y1="48" x2="100" y2="48" stroke="rgba(0,191,165,0.35)" stroke-width="1.5"
+                                stroke-linecap="round" />
+                            <line x1="82" y1="58" x2="108" y2="58" stroke="rgba(0,191,165,0.35)" stroke-width="1.5"
+                                stroke-linecap="round" />
+                            <line x1="168" y1="28" x2="198" y2="28" stroke="rgba(0,191,165,0.5)" stroke-width="1.5"
+                                stroke-linecap="round" />
+                            <line x1="168" y1="38" x2="198" y2="38" stroke="rgba(0,191,165,0.35)" stroke-width="1.5"
+                                stroke-linecap="round" />
+                            <line x1="168" y1="48" x2="186" y2="48" stroke="rgba(0,191,165,0.35)" stroke-width="1.5"
+                                stroke-linecap="round" />
+                            <line x1="168" y1="58" x2="194" y2="58" stroke="rgba(0,191,165,0.35)" stroke-width="1.5"
+                                stroke-linecap="round" />
+                            <!-- Water drip from docs -->
+                            <path
+                                d="M97 88 C97 100 92 106 92 112 C92 116 94 118 97 118 C100 118 102 116 102 112 C102 106 97 100 97 88Z"
+                                fill="rgba(0,191,165,0.3)" stroke="rgba(0,191,165,0.6)" stroke-width="1" />
+                            <path
+                                d="M183 88 C183 100 178 106 178 112 C178 116 180 118 183 118 C186 118 188 116 188 112 C188 106 183 100 183 88Z"
+                                fill="rgba(0,191,165,0.3)" stroke="rgba(0,191,165,0.6)" stroke-width="1" />
+                            <!-- Splash ripples -->
+                            <ellipse cx="97" cy="118" rx="14" ry="3" stroke="rgba(0,191,165,0.35)" stroke-width="1"
+                                fill="none" />
+                            <ellipse cx="183" cy="118" rx="14" ry="3" stroke="rgba(0,191,165,0.35)" stroke-width="1"
+                                fill="none" />
+                            <!-- Checkmark in docs -->
+                            <path d="M84 70 L90 76 L110 60" stroke="rgba(0,191,165,0.8)" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                            <path d="M170 70 L176 76 L196 60" stroke="rgba(0,191,165,0.8)" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                        </svg>
+                    </div>
+                    <div class="card-tag">
+                        <span class="badge badge-teal">
+                            <span class="material-icons-round" style="font-size:11px">assignment</span>
+                            Assessment Tool
+                        </span>
+                    </div>
+                    <h2>ISMS Automation</h2>
+                    <p>Upload Google Classroom grade-book CSV file and generate formatted weekly ISMS assessment output
+                        files ready for import.</p>
+                    <div class="card-footer">
+                        <div class="flex gap-2">
+                            <span class="badge badge-muted">Automate</span>
+                            <span class="badge badge-muted">File Download</span>
+                        </div>
+                        <div class="card-arrow">
+                            <span class="material-icons-round">arrow_forward</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- PDF Extractor Card -->
+                <a href="/pdf-extractor" class="module-card card-pdf">
+                    <div class="card-illus">
+                        <svg viewBox="0 0 280 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Background pool -->
+                            <ellipse cx="140" cy="118" rx="110" ry="10" fill="rgba(251,191,36,0.08)" />
+                            <!-- PDF document -->
+                            <rect x="95" y="6" width="90" height="100" rx="8" fill="rgba(251,191,36,0.12)"
+                                stroke="rgba(251,191,36,0.4)" stroke-width="1" />
+                            <!-- Corner fold -->
+                            <path d="M155 6 L185 6 L185 30 L155 30 Z" fill="rgba(251,191,36,0.08)"
+                                stroke="rgba(251,191,36,0.3)" stroke-width="1" />
+                            <path d="M155 6 L155 30 L185 30" fill="rgba(251,191,36,0.15)"
+                                stroke="rgba(251,191,36,0.4)" stroke-width="1" />
+                            <!-- Text lines -->
+                            <line x1="110" y1="38" x2="170" y2="38" stroke="rgba(251,191,36,0.5)" stroke-width="2"
+                                stroke-linecap="round" />
+                            <line x1="110" y1="50" x2="165" y2="50" stroke="rgba(251,191,36,0.35)" stroke-width="1.5"
+                                stroke-linecap="round" />
+                            <line x1="110" y1="60" x2="158" y2="60" stroke="rgba(251,191,36,0.35)" stroke-width="1.5"
+                                stroke-linecap="round" />
+                            <line x1="110" y1="70" x2="170" y2="70" stroke="rgba(251,191,36,0.35)" stroke-width="1.5"
+                                stroke-linecap="round" />
+                            <line x1="110" y1="80" x2="148" y2="80" stroke="rgba(251,191,36,0.35)" stroke-width="1.5"
+                                stroke-linecap="round" />
+                            <!-- Extraction arrow -->
+                            <path d="M140 106 C140 118 140 118 140 118" stroke="rgba(251,191,36,0.6)" stroke-width="1.5" />
+                            <!-- Splash ring -->
+                            <ellipse cx="140" cy="118" rx="22" ry="4" stroke="rgba(251,191,36,0.35)" stroke-width="1"
+                                fill="none" />
+                            <!-- Sparkle -->
+                            <circle cx="170" cy="20" r="2" fill="rgba(255,255,255,0.6)" />
+                            <circle cx="108" cy="30" r="1.5" fill="rgba(255,255,255,0.4)" />
+                        </svg>
+                    </div>
+                    <div class="card-tag">
+                        <span class="badge" style="background:rgba(251,191,36,0.15);color:#fbbf24;border-color:rgba(251,191,36,0.3);">
+                            <span class="material-icons-round" style="font-size:11px">picture_as_pdf</span>
+                            Extraction Tool
+                        </span>
+                    </div>
+                    <h2>PDF Extractor</h2>
+                    <p>Extract structured text, tables, and headings from any PDF. Export as Markdown, JSON, HTML, or
+                        plain text.</p>
+                    <div class="card-footer">
+                        <div class="flex gap-2">
+                            <span class="badge badge-muted">PDF upload</span>
+                            <span class="badge badge-muted">Multi-format</span>
+                        </div>
+                        <div class="card-arrow">
+                            <span class="material-icons-round">arrow_forward</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- PEACE Sheet Generator Card -->
+                <a href="/peace-sheet" class="module-card card-peace">
+                    <div class="card-illus">
+                        <svg viewBox="0 0 280 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Background pool -->
+                            <ellipse cx="140" cy="120" rx="115" ry="9" fill="rgba(16,185,129,0.07)" />
+                            <!-- Spreadsheet grid -->
+                            <rect x="50" y="10" width="180" height="100" rx="8" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.35)" stroke-width="1" />
+                            <!-- Header row -->
+                            <rect x="50" y="10" width="180" height="20" rx="8" fill="rgba(16,185,129,0.2)" />
+                            <rect x="50" y="26" width="180" height="4" fill="rgba(16,185,129,0.2)" />
+                            <!-- Column dividers -->
+                            <line x1="95" y1="10" x2="95" y2="110" stroke="rgba(16,185,129,0.2)" stroke-width="1" />
+                            <line x1="140" y1="10" x2="140" y2="110" stroke="rgba(16,185,129,0.2)" stroke-width="1" />
+                            <line x1="185" y1="10" x2="185" y2="110" stroke="rgba(16,185,129,0.2)" stroke-width="1" />
+                            <!-- Row dividers -->
+                            <line x1="50" y1="46" x2="230" y2="46" stroke="rgba(16,185,129,0.15)" stroke-width="1" />
+                            <line x1="50" y1="62" x2="230" y2="62" stroke="rgba(16,185,129,0.15)" stroke-width="1" />
+                            <line x1="50" y1="78" x2="230" y2="78" stroke="rgba(16,185,129,0.15)" stroke-width="1" />
+                            <line x1="50" y1="94" x2="230" y2="94" stroke="rgba(16,185,129,0.15)" stroke-width="1" />
+                            <!-- Cell data lines -->
+                            <line x1="60" y1="54" x2="86" y2="54" stroke="rgba(16,185,129,0.45)" stroke-width="1.5" stroke-linecap="round" />
+                            <line x1="60" y1="70" x2="86" y2="70" stroke="rgba(16,185,129,0.35)" stroke-width="1.5" stroke-linecap="round" />
+                            <line x1="60" y1="86" x2="86" y2="86" stroke="rgba(16,185,129,0.35)" stroke-width="1.5" stroke-linecap="round" />
+                            <line x1="60" y1="102" x2="86" y2="102" stroke="rgba(16,185,129,0.35)" stroke-width="1.5" stroke-linecap="round" />
+                            <!-- Score cells (highlight) -->
+                            <rect x="98" y="48" width="38" height="12" rx="3" fill="rgba(16,185,129,0.15)" />
+                            <rect x="98" y="64" width="38" height="12" rx="3" fill="rgba(16,185,129,0.15)" />
+                            <rect x="143" y="48" width="38" height="12" rx="3" fill="rgba(16,185,129,0.1)" />
+                            <!-- Total column (amber highlight) -->
+                            <rect x="188" y="30" width="38" height="80" rx="3" fill="rgba(251,191,36,0.08)" />
+                            <!-- Water drip from grid -->
+                            <path d="M140 110 C140 118 138 120 140 122 C142 120 140 118 140 110Z" fill="rgba(16,185,129,0.4)" stroke="rgba(16,185,129,0.7)" stroke-width="0.5" />
+                            <!-- Splash ring -->
+                            <ellipse cx="140" cy="122" rx="16" ry="3" stroke="rgba(16,185,129,0.3)" stroke-width="1" fill="none" />
+                        </svg>
+                    </div>
+                    <div class="card-tag">
+                        <span class="badge" style="background:rgba(16,185,129,0.12);color:#34d399;border:1px solid rgba(16,185,129,0.3);">
+                            <span class="material-icons-round" style="font-size:11px">table_chart</span>
+                            Assessment Tool
+                        </span>
+                    </div>
+                    <h2>PEACE Sheet Generator</h2>
+                    <p>Transform raw score CSVs into the standardised 56-column PEACE SHEET format ready for ISMS import. Map assessments and preview before download.</p>
+                    <div class="card-footer">
+                        <div class="flex gap-2">
+                            <span class="badge badge-muted">CSV upload</span>
+                            <span class="badge badge-muted">ISMS-ready</span>
+                        </div>
+                        <div class="card-arrow">
+                            <span class="material-icons-round">arrow_forward</span>
+                        </div>
+                    </div>
+                </a>
+
+            </div>
+        </section>
+    </div>
+
+</body>
+
+</html>
